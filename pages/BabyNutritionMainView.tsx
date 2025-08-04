@@ -5,8 +5,7 @@ import PlusIcon from '../components/icons/PlusIcon.tsx';
 import EditIcon from '../components/icons/EditIcon.tsx';
 import TrashIcon from '../components/icons/TrashIcon.tsx';
 import BookOpenIcon from '../components/icons/BookOpenIcon.tsx';
-// import useLocalStorage from '../hooks/useLocalStorage'; // Replaced by service
-import * as babyCareService from '../services/babyCareService.ts'; // Import the service
+import * as babyCareService from '../services/babyCareService.ts';
 import AppModal from '../components/AppModal.tsx'; 
 import { useAuth } from '../contexts/AuthContext.tsx';
 
@@ -138,29 +137,39 @@ const FoodDiaryView: React.FC<{childId: string, userId: string}> = ({childId, us
         if (!userId || !childId) return;
         if (mealFormData.items.length === 0) { alert("Please add at least one food item."); return; }
         
-        const newLogEntry: FoodLogEntry = {
-            id: editingLog?.id || Date.now().toString(), user_id: userId, childId, date: mealFormData.date, time: mealFormData.time,
+        const logData = {
+            date: mealFormData.date, time: mealFormData.time,
             mealType: currentMealType, items: mealFormData.items, notes: mealFormData.notes,
             isNewFoodIntroduction: mealFormData.isNewFoodIntroduction,
             newFoodReaction: mealFormData.isNewFoodIntroduction ? mealFormData.newFoodReaction : undefined,
             newFoodReactionNotes: mealFormData.isNewFoodIntroduction ? mealFormData.newFoodReactionNotes : undefined,
         };
 
-        const updatedLogs = editingLog 
-            ? foodLogs.map(log => log.id === editingLog.id ? newLogEntry : log)
-            : [...foodLogs, newLogEntry];
-        
-        await babyCareService.saveFoodLogs(userId, childId, updatedLogs.sort((a,b) => new Date(b.date + 'T' + b.time).getTime() - new Date(a.date + 'T' + a.time).getTime()));
-        setFoodLogs(updatedLogs.sort((a,b) => new Date(b.date + 'T' + b.time).getTime() - new Date(a.date + 'T' + a.time).getTime()));
-        setIsModalOpen(false);
+        try {
+            if (editingLog) {
+                const updatedLog = await babyCareService.updateFoodLog(userId, editingLog.id, logData);
+                setFoodLogs(prevLogs => prevLogs.map(log => log.id === editingLog.id ? updatedLog : log).sort((a,b) => new Date(b.date + 'T' + b.time).getTime() - new Date(a.date + 'T' + a.time).getTime()));
+            } else {
+                const addedLog = await babyCareService.addFoodLog(userId, childId, logData);
+                setFoodLogs(prevLogs => [addedLog, ...prevLogs].sort((a,b) => new Date(b.date + 'T' + b.time).getTime() - new Date(a.date + 'T' + a.time).getTime()));
+            }
+            setIsModalOpen(false);
+        } catch (error) {
+            console.error("Failed to save food log:", error);
+            alert("Could not save food log.");
+        }
     };
     
     const handleDeleteLog = async (logId: string) => {
         if (!userId || !childId) return;
         if (window.confirm("Are you sure you want to delete this meal log?")) {
-            const updated = foodLogs.filter(log => log.id !== logId);
-            await babyCareService.saveFoodLogs(userId, childId, updated);
-            setFoodLogs(updated);
+            try {
+                await babyCareService.deleteFoodLog(userId, logId);
+                setFoodLogs(prevLogs => prevLogs.filter(log => log.id !== logId));
+            } catch (error) {
+                console.error("Failed to delete food log:", error);
+                alert("Could not delete food log.");
+            }
         }
     };
 

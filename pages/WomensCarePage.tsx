@@ -378,7 +378,7 @@ const SymptomLogView: React.FC = () => {
                     <div>
                         <p className="font-semibold text-textPrimary">{new Date(log.date).toLocaleDateString()} {log.severity && <span className="text-xs bg-slate-200 text-textSecondary px-1.5 py-0.5 rounded-full ml-2">{log.severity}</span>}</p>
                         {log.symptoms?.length > 0 && <p className="text-sm text-textSecondary">Symptoms: {log.symptoms.join(', ')}{log.customSymptom && (log.symptoms.length > 0 ? ', ' : '') + log.customSymptom}</p>}
-                        {log.moods?.length > 0 && <p className="text-sm text-textSecondary">Moods: {log.moods.join(', ')}</p>}
+                        {log.moods && log.moods.length > 0 && <p className="text-sm text-textSecondary">Moods: {log.moods.join(', ')}</p>}
                         {log.notes && <p className="text-xs text-textSecondary mt-1">Notes: {log.notes}</p>}
                     </div>
                     <div className="flex space-x-1">
@@ -774,7 +774,7 @@ const PostnatalCareView: React.FC = () => {
                            <div className="flex justify-between items-start">
                                 <div>
                                     <p className="font-medium text-sm">{new Date(log.date).toLocaleDateString()}</p>
-                                    {log.moods?.length > 0 && <p className="text-xs">Moods: {log.moods.join(', ')}</p>}
+                                    {log.moods && log.moods.length > 0 && <p className="text-xs">Moods: {log.moods.join(', ')}</p>}
                                     {log.energyLevel && <p className="text-xs">Energy: {log.energyLevel}/5</p>}
                                     {log.sleepQuality && <p className="text-xs">Sleep: {log.sleepQuality}/5</p>}
                                     {log.supportSystemRating && <p className="text-xs">Support: {log.supportSystemRating}/5</p>}
@@ -844,7 +844,7 @@ const PostnatalCareView: React.FC = () => {
                                 {label: 'Support System', name: 'supportSystemRating'}
                             ].map(item => (
                                 <div key={item.name}>
-                                    <label className="text-sm">{item.label} (1-5): {mentalWellnessFormData[item.name as keyof typeof mentalWellnessFormData] || 3}</label>
+                                    <label className="text-sm">{item.label} (1-5): {mentalWellnessFormData[item.name as keyof typeof mentalWellnessFormData] as number || 3}</label>
                                     <input type="range" name={item.name} min="1" max="5" value={mentalWellnessFormData[item.name as keyof typeof mentalWellnessFormData] as number || 3} onChange={handleMentalWellnessFormChange} className="w-full"/>
                                 </div>
                             ))}

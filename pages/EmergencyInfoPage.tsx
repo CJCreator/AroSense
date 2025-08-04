@@ -102,8 +102,8 @@ const EmergencyInfoPage: React.FC = () => {
                     setError("Could not find your personal profile. Please create one in 'Family Profiles'.");
                 }
             })
-            .catch(err => {
-                console.error(err);
+            .catch((err: any) => {
+                console.error("Failed to load emergency info:", err);
                 setError("Failed to load your information.");
             })
             .finally(() => setIsLoading(false));
