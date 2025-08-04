@@ -1,15 +1,19 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import PillIcon from '../components/icons/PillIcon.tsx';
 import PlusIcon from '../components/icons/PlusIcon.tsx';
 import EditIcon from '../components/icons/EditIcon.tsx';
 import TrashIcon from '../components/icons/TrashIcon.tsx';
-import useLocalStorage from '../hooks/useLocalStorage.ts';
 import { Prescription, FamilyMember } from '../types.ts';
 import AppModal from '../components/AppModal.tsx';
+import { useAuth } from '../contexts/AuthContext.tsx';
+import * as prescriptionService from '../services/prescriptionService.ts';
+import * as familyMemberService from '../services/familyMemberService.ts';
 
 const PrescriptionPage: React.FC = () => {
-  const [prescriptions, setPrescriptions] = useLocalStorage<Prescription[]>('user_prescriptions', []);
-  const [familyMembers] = useLocalStorage<FamilyMember[]>('family_members', []); // Assuming family members are stored here for dropdown
+  const { currentUser } = useAuth();
+  const [prescriptions, setPrescriptions] = useState<Prescription[]>([]);
+  const [familyMembers, setFamilyMembers] = useState<FamilyMember[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingPrescription, setEditingPrescription] = useState<Prescription | undefined>(undefined);
   
@@ -18,13 +22,36 @@ const PrescriptionPage: React.FC = () => {
     dosage: '',
     frequency: '',
     prescribingDoctor: '',
-    familyMemberId: familyMembers.length > 0 ? familyMembers[0].id : ''
+    familyMemberId: ''
   };
   const [formData, setFormData] = useState<Partial<Prescription>>(initialFormState);
 
+  const loadData = useCallback(async () => {
+    if (!currentUser) return;
+    setIsLoading(true);
+    try {
+      const [prescriptionsData, familyMembersData] = await Promise.all([
+        prescriptionService.getPrescriptions(currentUser.id),
+        familyMemberService.getFamilyMembers(currentUser.id, currentUser.user_metadata.name || 'User')
+      ]);
+      setPrescriptions(prescriptionsData);
+      setFamilyMembers(familyMembersData);
+    } catch (error) {
+      console.error("Failed to load data:", error);
+      alert("Could not load prescriptions. Please try again.");
+    } finally {
+      setIsLoading(false);
+    }
+  }, [currentUser]);
+
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
+
   const handleOpenModal = (prescription?: Prescription) => {
     setEditingPrescription(prescription);
-    setFormData(prescription || { ...initialFormState, familyMemberId: familyMembers.length > 0 ? familyMembers[0].id : '' });
+    const defaultFamilyMemberId = familyMembers.length > 0 ? familyMembers[0].id : '';
+    setFormData(prescription || { ...initialFormState, familyMemberId: defaultFamilyMemberId });
     setIsModalOpen(true);
   };
 
@@ -38,25 +65,44 @@ const PrescriptionPage: React.FC = () => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
   
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
+    if (!currentUser) return;
     if (!formData.medicationName || !formData.dosage || !formData.frequency || !formData.familyMemberId) {
         alert("Please fill in all required fields.");
         return;
     }
 
-    if (editingPrescription) {
-        setPrescriptions(prescriptions.map(p => p.id === editingPrescription.id ? { ...p, ...formData } as Prescription : p));
-    } else {
-        setPrescriptions([...prescriptions, { ...formData, id: Date.now().toString() } as Prescription]);
+    try {
+      if (editingPrescription) {
+        const updated = await prescriptionService.updatePrescription(currentUser.id, editingPrescription.id, formData);
+        setPrescriptions(prescriptions.map(p => p.id === updated.id ? updated : p));
+      } else {
+        const newPrescription = await prescriptionService.addPrescription(currentUser.id, formData);
+        setPrescriptions([newPrescription, ...prescriptions]);
+      }
+      handleCloseModal();
+    } catch (error) {
+      console.error("Failed to save prescription:", error);
+      alert("Failed to save prescription. Please try again.");
     }
-    handleCloseModal();
   };
 
-  const handleDelete = (id: string) => {
+  const handleDelete = async (id: string) => {
+    if (!currentUser) return;
     if (window.confirm("Are you sure you want to delete this prescription?")) {
+      try {
+        await prescriptionService.deletePrescription(currentUser.id, id);
         setPrescriptions(prescriptions.filter(p => p.id !== id));
+      } catch (error) {
+        console.error("Failed to delete prescription:", error);
+        alert("Failed to delete prescription. Please try again.");
+      }
     }
   };
+
+  if (isLoading) {
+    return <div className="text-center p-8">Loading prescriptions...</div>;
+  }
 
   return (
     <div className="space-y-6">
@@ -124,28 +170,28 @@ const PrescriptionPage: React.FC = () => {
           <div className="space-y-4">
               <div>
                   <label htmlFor="familyMemberId" className="block text-sm font-medium text-textSecondary mb-1">For Family Member</label>
-                  <select name="familyMemberId" id="familyMemberId" value={formData.familyMemberId} onChange={handleChange} required className="w-full p-2.5 border border-slate-300 rounded-md focus:ring-primary focus:border-primary bg-white">
+                  <select name="familyMemberId" id="familyMemberId" value={formData.familyMemberId || ''} onChange={handleChange} required className="w-full p-2.5 border border-slate-300 rounded-md focus:ring-primary focus:border-primary bg-white">
                       <option value="" disabled>Select Member</option>
                       {familyMembers.map(fm => <option key={fm.id} value={fm.id}>{fm.name}</option>)}
                   </select>
               </div>
               <div>
                   <label htmlFor="medicationName" className="block text-sm font-medium text-textSecondary mb-1">Medication Name</label>
-                  <input type="text" name="medicationName" id="medicationName" value={formData.medicationName} onChange={handleChange} required className="w-full p-2.5 border border-slate-300 rounded-md focus:ring-primary focus:border-primary bg-white"/>
+                  <input type="text" name="medicationName" id="medicationName" value={formData.medicationName || ''} onChange={handleChange} required className="w-full p-2.5 border border-slate-300 rounded-md focus:ring-primary focus:border-primary bg-white"/>
               </div>
                <div className="grid grid-cols-2 gap-4">
                     <div>
                         <label htmlFor="dosage" className="block text-sm font-medium text-textSecondary mb-1">Dosage</label>
-                        <input type="text" name="dosage" id="dosage" value={formData.dosage} onChange={handleChange} required className="w-full p-2.5 border border-slate-300 rounded-md focus:ring-primary focus:border-primary bg-white"/>
+                        <input type="text" name="dosage" id="dosage" value={formData.dosage || ''} onChange={handleChange} required className="w-full p-2.5 border border-slate-300 rounded-md focus:ring-primary focus:border-primary bg-white"/>
                     </div>
                     <div>
                         <label htmlFor="frequency" className="block text-sm font-medium text-textSecondary mb-1">Frequency</label>
-                        <input type="text" name="frequency" id="frequency" value={formData.frequency} onChange={handleChange} required className="w-full p-2.5 border border-slate-300 rounded-md focus:ring-primary focus:border-primary bg-white"/>
+                        <input type="text" name="frequency" id="frequency" value={formData.frequency || ''} onChange={handleChange} required className="w-full p-2.5 border border-slate-300 rounded-md focus:ring-primary focus:border-primary bg-white"/>
                     </div>
                </div>
                <div>
                    <label htmlFor="prescribingDoctor" className="block text-sm font-medium text-textSecondary mb-1">Prescribing Doctor</label>
-                   <input type="text" name="prescribingDoctor" id="prescribingDoctor" value={formData.prescribingDoctor} onChange={handleChange} required className="w-full p-2.5 border border-slate-300 rounded-md focus:ring-primary focus:border-primary bg-white"/>
+                   <input type="text" name="prescribingDoctor" id="prescribingDoctor" value={formData.prescribingDoctor || ''} onChange={handleChange} required className="w-full p-2.5 border border-slate-300 rounded-md focus:ring-primary focus:border-primary bg-white"/>
                </div>
                 {/* Optional fields can be added here, e.g., pharmacy, refillDate */}
           </div>
