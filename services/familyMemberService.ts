@@ -1,6 +1,6 @@
-import { FamilyMember } from '../types.ts';
-import { supabase } from '../src/integrations/supabase/client.ts';
-import { DEFAULT_USER_PROFILE_IMAGE } from '../constants.tsx';
+import { FamilyMember } from '../types';
+import { supabase } from '../integrations/supabase/client';
+import { DEFAULT_USER_PROFILE_IMAGE } from '../constants';
 
 // Helper to create the initial 'Self' profile for a new user
 const createInitialSelfProfile = async (userId: string, userName: string): Promise<FamilyMember> => {

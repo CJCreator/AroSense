@@ -1,5 +1,5 @@
-import { Prescription } from '../types.ts';
-import { supabase } from '../src/integrations/supabase/client.ts';
+import { Prescription } from '../types';
+import { supabase } from '../integrations/supabase/client';
 
 export const getPrescriptions = async (userId: string): Promise<Prescription[]> => {
     if (!userId) return [];

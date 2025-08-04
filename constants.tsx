@@ -1,25 +1,25 @@
-import { NavItem, BadgeDefinition, ActivityTypeForGamification } from './types.ts';
+import { NavItem, BadgeDefinition, ActivityTypeForGamification } from './types';
 
-import HomeIcon from './components/icons/HomeIcon.tsx';
-import UsersIcon from './components/icons/UsersIcon.tsx';
+import HomeIcon from './components/icons/HomeIcon';
+import UsersIcon from './components/icons/UsersIcon';
 // import EmergencyIcon from './components/icons/EmergencyIcon'; // Old icon
-import PlusIcon from './components/icons/PlusIcon.tsx'; // New icon for Emergency Info (as Medical Cross)
+import PlusIcon from './components/icons/PlusIcon'; // New icon for Emergency Info (as Medical Cross)
 // import DocumentIcon from './components/icons/DocumentIcon'; // Old icon
-import FolderIcon from './components/icons/FolderIcon.tsx'; // New icon for Documents
-import SettingsIcon from './components/icons/SettingsIcon.tsx';
-import PillIcon from './components/icons/PillIcon.tsx';
-import ShieldCheckIcon from './components/icons/ShieldCheckIcon.tsx';
-import CreditCardIcon from './components/icons/CreditCardIcon.tsx';
-import HeartbeatIcon from './components/icons/HeartbeatIcon.tsx';
-import BabyIcon from './components/icons/BabyIcon.tsx';
-import FemaleIcon from './components/icons/FemaleIcon.tsx';
-import PregnantWomanIcon from './components/icons/PregnantWomanIcon.tsx';
+import FolderIcon from './components/icons/FolderIcon'; // New icon for Documents
+import SettingsIcon from './components/icons/SettingsIcon';
+import PillIcon from './components/icons/PillIcon';
+import ShieldCheckIcon from './components/icons/ShieldCheckIcon';
+import CreditCardIcon from './components/icons/CreditCardIcon';
+import HeartbeatIcon from './components/icons/HeartbeatIcon';
+import BabyIcon from './components/icons/BabyIcon';
+import FemaleIcon from './components/icons/FemaleIcon';
+import PregnantWomanIcon from './components/icons/PregnantWomanIcon';
 // import SearchIcon from './components/icons/SearchIcon'; // Used in Header directly
 // import PrinterIcon from './components/icons/PrinterIcon'; // Contextual, not in main nav
 // import BookOpenIcon from './components/icons/BookOpenIcon'; // Contextual
-import VideoCameraIcon from './components/icons/VideoCameraIcon.tsx';
-import ChatBubbleLeftRightIcon from './components/icons/ChatBubbleLeftRightIcon.tsx';
-import StarIcon from './components/icons/StarIcon.tsx'; // Added for Wellness Rewards
+import VideoCameraIcon from './components/icons/VideoCameraIcon';
+import ChatBubbleLeftRightIcon from './components/icons/ChatBubbleLeftRightIcon';
+import StarIcon from './components/icons/StarIcon'; // Added for Wellness Rewards
 
 
 export const APP_NAME = "AroSense";

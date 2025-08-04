@@ -1,8 +1,8 @@
-import { supabase } from '../src/integrations/supabase/client.ts';
+import { supabase } from '../integrations/supabase/client';
 import {
     FeedingLogEntry, DiaperLogEntry, BabySleepLogEntry, GrowthRecordEntry, MilestoneEntry,
     VaccinationEntry, FoodLogEntry
-} from '../types.ts';
+} from '../types';
 
 // Generic helper for adding a log
 const addLog = async <T extends { id: string }>(tableName: string, userId: string, childId: string, logData: Omit<T, 'id' | 'user_id' | 'childId' | 'created_at'>): Promise<T> => {

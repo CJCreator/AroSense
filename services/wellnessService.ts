@@ -1,8 +1,8 @@
-import { supabase } from '../src/integrations/supabase/client.ts';
+import { supabase } from '../integrations/supabase/client';
 import { 
     VitalLog, WeightLogEntry, ActivityLog, SleepLog, HydrationLog, MoodLog,
     WeightGoal, ActivityGoal, HydrationGoal, WellnessResource 
-} from '../types.ts';
+} from '../types';
 
 // --- Vitals Service ---
 export const getVitals = async (userId: string): Promise<VitalLog[]> => {

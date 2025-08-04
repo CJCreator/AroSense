@@ -1,5 +1,5 @@
-import React from 'react';
-import { User as SupabaseUser } from '@supabase/supabase-js';
+import type React from 'react';
+import type { User as SupabaseUser } from '@supabase/supabase-js';
 
 export enum Gender {
   Male = 'Male',
