@@ -144,7 +144,7 @@ const PeriodTrackerView: React.FC = () => {
     ovulationDate.setDate(ovulationDate.getDate() - 14); // Simplified: 14 days before next period
 
     const fertileWindowStartDate = new Date(ovulationDate);
-    fertileWindowStartDate.setDate(fertileWindowStartDate.getDate() - 5);
+    fertileWindowStartDate.setDate(ovulationDate.getDate() - 5);
     const fertileWindowEndDate = new Date(ovulationDate); // Ovulation day is fertile
 
     return { 
