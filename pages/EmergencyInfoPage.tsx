@@ -191,7 +191,7 @@ const EmergencyInfoPage: React.FC = () => {
         setIsEditing(false);
         setShowIncompleteProfileBanner(false);
         alert("Emergency information saved successfully!");
-      } catch (err: any) { // Explicitly type err as any to allow access to message
+      } catch (err) {
         console.error(err);
         alert("Failed to save changes. Please try again.");
       }

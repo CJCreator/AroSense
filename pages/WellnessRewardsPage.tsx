@@ -45,10 +45,6 @@ const WellnessRewardsPage: React.FC = () => {
     return () => window.removeEventListener('gamificationUpdate', loadGamificationData);
   }, [userId]);
 
-  const getBadgeDefinition = (badgeId: string): BadgeDefinition | undefined => {
-    return INITIAL_BADGES.find(b => b.id === badgeId);
-  };
-
   const handleBadgeClick = (badgeDef: BadgeDefinition) => {
     const isEarned = earnedBadges.some(eb => eb.badgeId === badgeDef.id);
 
