@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@supabase/supabase-js": "2",
+    "@tsconfig/node18": "^18.2.4",
     "@types/react-dom": "^19.1.7",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
