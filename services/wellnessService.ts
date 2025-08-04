@@ -1,97 +1,127 @@
+import { supabase } from '../src/integrations/supabase/client.ts';
 import { 
-    VitalLog, WeightLogEntry, BMIRecord, WeightGoal, ActivityLog, ActivityGoal, 
-    SleepLog, HydrationLog, HydrationGoal, MoodLog, WellnessResource 
+    VitalLog, WeightLogEntry, ActivityLog, SleepLog, HydrationLog, MoodLog,
+    WeightGoal, ActivityGoal, HydrationGoal, WellnessResource 
 } from '../types.ts';
 
-const getLocalStorageKey = (userId: string, dataType: string): string => {
-    return `${userId}_${dataType}`;
-};
-
-const genericGet = async <T>(userId: string, tableName: string): Promise<T[]> => {
-    const key = getLocalStorageKey(userId, tableName);
-    try {
-        const data = localStorage.getItem(key);
-        return data ? JSON.parse(data) : [];
-    } catch (error) {
-        console.error(`Error reading from localStorage for key ${key}:`, error);
-        return [];
-    }
-};
-
-const genericSave = async <T>(userId: string, tableName: string, items: T[]): Promise<void> => {
-    const key = getLocalStorageKey(userId, tableName);
-    try {
-        localStorage.setItem(key, JSON.stringify(items));
-    } catch (error) {
-        console.error(`Error writing to localStorage for key ${key}:`, error);
-        throw new Error(`Failed to save data for ${tableName}.`);
-    }
-};
-
-const genericGetGoal = async <T>(userId: string, tableName: string, defaultGoal: T): Promise<T> => {
-    const key = getLocalStorageKey(userId, tableName);
-    try {
-        const data = localStorage.getItem(key);
-        return data ? JSON.parse(data) : defaultGoal;
-    } catch (error) {
-        console.error(`Error reading from localStorage for key ${key}:`, error);
-        return defaultGoal;
-    }
-};
-
-const genericSaveGoal = async <T>(userId: string, tableName: string, goal: T): Promise<void> => {
-    const key = getLocalStorageKey(userId, tableName);
-    try {
-        localStorage.setItem(key, JSON.stringify(goal));
-    } catch (error) {
-        console.error(`Error writing to localStorage for key ${key}:`, error);
-        throw new Error(`Failed to save goal for ${tableName}.`);
-    }
-};
-
-
 // --- Vitals Service ---
-export const getVitals = (userId: string): Promise<VitalLog[]> => genericGet<VitalLog>(userId, 'wellness_vitals');
-export const saveVitals = (userId: string, vitals: VitalLog[]): Promise<void> => genericSave<VitalLog>(userId, 'wellness_vitals', vitals);
+export const getVitals = async (userId: string): Promise<VitalLog[]> => {
+    const { data, error } = await supabase.from('wellness_vitals').select('*').eq('user_id', userId).order('date', { ascending: false });
+    if (error) throw error;
+    return data as VitalLog[];
+};
+export const addVital = async (userId: string, vital: Omit<VitalLog, 'id' | 'user_id' | 'created_at'>): Promise<VitalLog> => {
+    const { data, error } = await supabase.from('wellness_vitals').insert({ ...vital, user_id: userId }).select().single();
+    if (error) throw error;
+    return data as VitalLog;
+};
+export const deleteVital = async (userId: string, vitalId: string): Promise<void> => {
+    const { error } = await supabase.from('wellness_vitals').delete().eq('id', vitalId).eq('user_id', userId);
+    if (error) throw error;
+};
 
 // --- Weight & BMI Service ---
-export const getWeightLogs = (userId: string): Promise<WeightLogEntry[]> => genericGet<WeightLogEntry>(userId, 'wellness_weight_logs');
-export const saveWeightLogs = (userId: string, logs: WeightLogEntry[]): Promise<void> => genericSave<WeightLogEntry>(userId, 'wellness_weight_logs', logs);
+export const getWeightLogs = async (userId: string): Promise<WeightLogEntry[]> => {
+    const { data, error } = await supabase.from('wellness_weight_logs').select('*').eq('user_id', userId).order('date', { ascending: false });
+    if (error) throw error;
+    return data as WeightLogEntry[];
+};
+export const addWeightLog = async (userId: string, log: Omit<WeightLogEntry, 'id' | 'user_id' | 'created_at'>): Promise<WeightLogEntry> => {
+    const { data, error } = await supabase.from('wellness_weight_logs').insert({ ...log, user_id: userId }).select().single();
+    if (error) throw error;
+    return data as WeightLogEntry;
+};
+export const deleteWeightLog = async (userId: string, logId: string): Promise<void> => {
+    const { error } = await supabase.from('wellness_weight_logs').delete().eq('id', logId).eq('user_id', userId);
+    if (error) throw error;
+};
 
-export const getBmiRecords = (userId: string): Promise<BMIRecord[]> => genericGet<BMIRecord>(userId, 'wellness_bmi_records');
-export const saveBmiRecords = (userId: string, records: BMIRecord[]): Promise<void> => genericSave<BMIRecord>(userId, 'wellness_bmi_records', records);
-
-export const getWeightGoal = (userId: string, defaultGoal: WeightGoal): Promise<WeightGoal> => genericGetGoal<WeightGoal>(userId, 'wellness_weight_goal', defaultGoal);
-export const saveWeightGoal = (userId: string, goal: WeightGoal): Promise<void> => genericSaveGoal<WeightGoal>(userId, 'wellness_weight_goal', goal);
-
+// --- Goals (Weight, Activity, Hydration) ---
+export const getGoals = async (userId: string): Promise<{ weight_goal: WeightGoal, activity_goal: ActivityGoal, hydration_goal: HydrationGoal } | null> => {
+    const { data, error } = await supabase.from('wellness_goals').select('weight_goal, activity_goal, hydration_goal').eq('user_id', userId).single();
+    if (error && error.code !== 'PGRST116') throw error; // Ignore 'no rows' error
+    return data;
+};
+export const saveWeightGoal = async (userId: string, goal: WeightGoal): Promise<void> => {
+    const { error } = await supabase.from('wellness_goals').upsert({ user_id: userId, weight_goal: goal });
+    if (error) throw error;
+};
+export const saveActivityGoal = async (userId: string, goal: ActivityGoal): Promise<void> => {
+    const { error } = await supabase.from('wellness_goals').upsert({ user_id: userId, activity_goal: goal });
+    if (error) throw error;
+};
+export const saveHydrationGoal = async (userId: string, goal: HydrationGoal): Promise<void> => {
+    const { error } = await supabase.from('wellness_goals').upsert({ user_id: userId, hydration_goal: goal });
+    if (error) throw error;
+};
 
 // --- Activity Service ---
-export const getActivityLogs = (userId: string): Promise<ActivityLog[]> => genericGet<ActivityLog>(userId, 'wellness_activity_logs');
-export const saveActivityLogs = (userId: string, logs: ActivityLog[]): Promise<void> => genericSave<ActivityLog>(userId, 'wellness_activity_logs', logs);
-
-export const getActivityGoal = (userId: string, defaultGoal: ActivityGoal): Promise<ActivityGoal> => genericGetGoal<ActivityGoal>(userId, 'wellness_activity_goal', defaultGoal);
-export const saveActivityGoal = (userId: string, goal: ActivityGoal): Promise<void> => genericSaveGoal<ActivityGoal>(userId, 'wellness_activity_goal', goal);
-
+export const getActivityLogs = async (userId: string): Promise<ActivityLog[]> => {
+    const { data, error } = await supabase.from('wellness_activity_logs').select('*').eq('user_id', userId).order('date', { ascending: false });
+    if (error) throw error;
+    return data as ActivityLog[];
+};
+export const addActivityLog = async (userId: string, log: Omit<ActivityLog, 'id' | 'user_id' | 'created_at'>): Promise<ActivityLog> => {
+    const { data, error } = await supabase.from('wellness_activity_logs').insert({ ...log, user_id: userId }).select().single();
+    if (error) throw error;
+    return data as ActivityLog;
+};
+export const deleteActivityLog = async (userId: string, logId: string): Promise<void> => {
+    const { error } = await supabase.from('wellness_activity_logs').delete().eq('id', logId).eq('user_id', userId);
+    if (error) throw error;
+};
 
 // --- Sleep Service ---
-export const getSleepLogs = (userId: string): Promise<SleepLog[]> => genericGet<SleepLog>(userId, 'wellness_sleep_logs');
-export const saveSleepLogs = (userId: string, logs: SleepLog[]): Promise<void> => genericSave<SleepLog>(userId, 'wellness_sleep_logs', logs);
+export const getSleepLogs = async (userId: string): Promise<SleepLog[]> => {
+    const { data, error } = await supabase.from('wellness_sleep_logs').select('*').eq('user_id', userId).order('date', { ascending: false });
+    if (error) throw error;
+    return data as SleepLog[];
+};
+export const addSleepLog = async (userId: string, log: Omit<SleepLog, 'id' | 'user_id' | 'created_at'>): Promise<SleepLog> => {
+    const { data, error } = await supabase.from('wellness_sleep_logs').insert({ ...log, user_id: userId }).select().single();
+    if (error) throw error;
+    return data as SleepLog;
+};
+export const deleteSleepLog = async (userId: string, logId: string): Promise<void> => {
+    const { error } = await supabase.from('wellness_sleep_logs').delete().eq('id', logId).eq('user_id', userId);
+    if (error) throw error;
+};
 
 // --- Hydration Service ---
-export const getHydrationLogs = (userId: string): Promise<HydrationLog[]> => genericGet<HydrationLog>(userId, 'wellness_hydration_logs');
-export const saveHydrationLogs = (userId: string, logs: HydrationLog[]): Promise<void> => genericSave<HydrationLog>(userId, 'wellness_hydration_logs', logs);
-
-export const getHydrationGoal = (userId: string, defaultGoal: HydrationGoal): Promise<HydrationGoal> => genericGetGoal<HydrationGoal>(userId, 'wellness_hydration_goal', defaultGoal);
-export const saveHydrationGoal = (userId: string, goal: HydrationGoal): Promise<void> => genericSaveGoal<HydrationGoal>(userId, 'wellness_hydration_goal', goal);
+export const getHydrationLogs = async (userId: string): Promise<HydrationLog[]> => {
+    const { data, error } = await supabase.from('wellness_hydration_logs').select('*').eq('user_id', userId).order('date', { ascending: false });
+    if (error) throw error;
+    return data as HydrationLog[];
+};
+export const addHydrationLog = async (userId: string, log: Omit<HydrationLog, 'id' | 'user_id' | 'created_at'>): Promise<HydrationLog> => {
+    const { data, error } = await supabase.from('wellness_hydration_logs').insert({ ...log, user_id: userId }).select().single();
+    if (error) throw error;
+    return data as HydrationLog;
+};
+export const deleteHydrationLog = async (userId: string, logId: string): Promise<void> => {
+    const { error } = await supabase.from('wellness_hydration_logs').delete().eq('id', logId).eq('user_id', userId);
+    if (error) throw error;
+};
 
 // --- Mood Service ---
-export const getMoodLogs = (userId: string): Promise<MoodLog[]> => genericGet<MoodLog>(userId, 'wellness_mood_logs');
-export const saveMoodLogs = (userId: string, logs: MoodLog[]): Promise<void> => genericSave<MoodLog>(userId, 'wellness_mood_logs', logs);
-
+export const getMoodLogs = async (userId: string): Promise<MoodLog[]> => {
+    const { data, error } = await supabase.from('wellness_mood_logs').select('*').eq('user_id', userId).order('date', { ascending: false });
+    if (error) throw error;
+    return data as MoodLog[];
+};
+export const addMoodLog = async (userId: string, log: Omit<MoodLog, 'id' | 'user_id' | 'created_at'>): Promise<MoodLog> => {
+    const { data, error } = await supabase.from('wellness_mood_logs').insert({ ...log, user_id: userId }).select().single();
+    if (error) throw error;
+    return data as MoodLog;
+};
+export const deleteMoodLog = async (userId: string, logId: string): Promise<void> => {
+    const { error } = await supabase.from('wellness_mood_logs').delete().eq('id', logId).eq('user_id', userId);
+    if (error) throw error;
+};
 
 // --- Wellness Resources Service (Global, not user-specific) ---
 export const getWellnessResources = async (): Promise<WellnessResource[]> => {
-    // Mock data for local version
+    // This can be migrated to a Supabase table later if needed
     return Promise.resolve([
         { id: 'res1', title: 'Understanding Blood Pressure', category: 'Vitals', summary: 'Learn what the numbers mean and how to maintain a healthy BP.'},
         { id: 'res2', title: 'Benefits of Daily Activity', category: 'Activity', summary: 'Discover how even small amounts of daily exercise can improve your health.'},
