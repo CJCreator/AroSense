@@ -1,56 +1,97 @@
-# AI Rules for AroSense Application Development
+# 🧠 AroSense & Dyad AI Rules
 
-This document outlines the core technologies used in the AroSense application and provides guidelines for using specific libraries and patterns.
+This document defines the core technologies, coding standards, and library usage patterns for building and maintaining the **AroSense** and **Dyad** applications.
 
-## Tech Stack Overview
+---
 
-*   **Frontend Framework**: React
-*   **Language**: TypeScript
-*   **Routing**: React Router
-*   **Styling**: Tailwind CSS for all styling.
-*   **UI Components**: shadcn/ui components are preferred for pre-built UI elements. Radix UI is used as the underlying foundation for many components.
-*   **Icons**: Custom SVG icons are currently used. For new icons, `lucide-react` is the preferred library.
-*   **State Management**: React's built-in hooks (`useState`, `useEffect`, `useContext`) are used for local and global state.
-*   **Data Persistence (Frontend)**: `localStorage` is used for client-side data storage, managed through dedicated service files and a `useLocalStorage` hook.
-*   **Authentication**: Supabase is integrated for user authentication.
-*   **Backend**: A Node.js Express server with SQLite is available for potential future API integrations, though current frontend data is primarily handled via `localStorage`.
+## ⚙️ Tech Stack Overview
 
-## Library Usage Guidelines
+| Layer         | Technology Used                     |
+|--------------|--------------------------------------|
+| Frontend     | React + TypeScript                   |
+| Styling      | Tailwind CSS                         |
+| UI Components| shadcn/ui (Radix UI foundation)      |
+| Icons        | Custom SVG + `lucide-react`          |
+| Routing      | React Router                         |
+| State        | React Hooks + Context API            |
+| Persistence  | `localStorage` via service layer     |
+| Auth         | Supabase (via `AuthContext`)         |
+| Backend      | Node.js + Express + SQLite (optional)|
 
-To maintain consistency and efficiency, please adhere to the following rules when developing or modifying the application:
+---
 
-1.  **UI Components**:
-    *   Always use Tailwind CSS classes for styling. Avoid inline styles or separate CSS files unless absolutely necessary for complex, unique components.
-    *   Prioritize using existing shadcn/ui components. If a required component doesn't exist in shadcn/ui or needs significant customization, create a new, small, and focused React component in `src/components/`.
-    *   For modals, use the `AppModal.tsx` component.
-    *   For date and time input groups, use the `DateTimeInputGroup.tsx` component.
+## 🧩 Component & UI Guidelines
 
-2.  **Icons**:
-    *   Reuse existing SVG icon components from `src/components/icons/`.
-    *   If a new icon is needed, prefer importing it from `lucide-react`. If `lucide-react` does not offer the specific icon, create a new SVG icon component in `src/components/icons/`.
+- ✅ Use **Tailwind CSS** for all styling. Avoid inline styles or external CSS unless absolutely necessary.
+- 🧱 Prefer **shadcn/ui components**. If unavailable, create minimal custom components in `src/components/`.
+- 🪟 Use `AppModal.tsx` for modals and `DateTimeInputGroup.tsx` for date/time inputs.
+- 🎨 For icons:
+  - Reuse from `src/components/icons/`
+  - Prefer `lucide-react` for new icons
+  - If unavailable, create a new SVG component
 
-3.  **State Management & Data Persistence**:
-    *   For component-level state, use `useState` and `useEffect`.
-    *   For global state, leverage React's Context API (e.g., `AuthContext`).
-    *   For client-side data persistence, utilize `localStorage` through the provided service files (e.g., `services/familyMemberService.ts`, `services/wellnessService.ts`, `services/babyCareService.ts`, `services/documentService.ts`) and the `useLocalStorage` hook. Do not directly access `localStorage` in components.
+---
 
-4.  **Routing**:
-    *   All routing should be handled by `react-router-dom`.
-    *   Keep the main application routes defined in `src/App.tsx`.
+## 🧠 State & Data Management
 
-5.  **Authentication**:
-    *   Interact with user authentication via the `AuthContext` and its `useAuth` hook, which wraps the Supabase client. Do not directly call Supabase authentication methods from components.
+- 🔄 Use `useState` and `useEffect` for local state.
+- 🌐 Use Context API for global state (e.g., `AuthContext`).
+- 💾 For persistence:
+  - Use `localStorage` via service files like `babyCareService.ts`, `documentService.ts`, etc.
+  - Access through the `useLocalStorage` hook only—**never directly in components**.
 
-6.  **File Structure**:
-    *   Place pages in `src/pages/`.
-    *   Place reusable components in `src/components/`.
-    *   Place utility functions in `src/utils/`.
-    *   Place data interaction logic in `src/services/`.
-    *   Keep directory names all lower-case.
+---
 
-7.  **General Coding Practices**:
-    *   Always write code in TypeScript.
-    *   Ensure responsive design for all new UI elements.
-    *   Use toasts for user feedback on important events (e.g., success, error messages).
-    *   Avoid premature optimization or over-engineering. Focus on clear, simple, and elegant solutions.
-    *   Do not implement server-side logic or direct database interactions from the frontend; use the provided service layer.
+## 🚦 Routing & Navigation
+
+- 🛣️ Use `react-router-dom` for all routing.
+- 🗂️ Define main routes in `src/App.tsx`.
+
+---
+
+## 🔐 Authentication
+
+- 🔑 Use `AuthContext` and `useAuth` hook to interact with Supabase.
+- ❌ Do not call Supabase auth methods directly in components.
+
+---
+
+## 📁 File Structure Conventions
+
+| Folder         | Purpose                          |
+|----------------|----------------------------------|
+| `src/pages/`   | Page-level components             |
+| `src/components/` | Reusable UI components         |
+| `src/utils/`   | Utility functions                 |
+| `src/services/`| Data interaction logic            |
+
+- 📛 Use **lowercase** for all directory names.
+
+---
+
+## 🧼 Coding Standards
+
+- 🧾 Always use **TypeScript**.
+- 📱 Ensure **responsive design** for all components.
+- 🔔 Use **toasts** for user feedback (success/error).
+- 🧘 Focus on **clarity and simplicity**—avoid over-engineering.
+- 🚫 No server-side logic or DB calls in frontend—use service layer only.
+
+---
+
+## 🧪 Optional Enhancements
+
+To future-proof Dyad and AroSense:
+
+- ✅ Add JSDoc comments for reusable components
+- 🧪 Integrate Vitest or React Testing Library
+- 🧱 Implement global error boundaries
+- 🔐 Use `.env.local` for sensitive configs
+- ♿ Add accessibility features (ARIA, keyboard nav)
+- 🔄 Set up GitHub Actions for CI/CD
+
+---
+
+_Updated: August 2025_  
+_Maintainer: CJCreator_
+
