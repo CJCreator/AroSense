@@ -5,7 +5,7 @@ import {
 } from '../types.ts';
 
 // Generic helper for adding a log
-const addLog = async <T>(tableName: string, userId: string, childId: string, logData: Omit<T, 'id' | 'user_id' | 'child_id' | 'created_at'>): Promise<T> => {
+const addLog = async <T extends { id: string }>(tableName: string, userId: string, childId: string, logData: Omit<T, 'id' | 'user_id' | 'childId' | 'created_at'>): Promise<T> => {
     const { data, error } = await supabase
         .from(tableName)
         .insert({ ...logData, user_id: userId, child_id: childId })
@@ -87,6 +87,12 @@ export const getMilestones = async (userId: string, childId: string): Promise<Mi
 export const addMilestone = (userId: string, childId: string, milestoneData: Omit<MilestoneEntry, 'id'|'user_id'|'childId'|'created_at'>) => addLog<MilestoneEntry>('baby_milestones', userId, childId, milestoneData);
 export const updateMilestone = (userId: string, milestoneId: string, milestoneData: Partial<MilestoneEntry>) => updateLog<MilestoneEntry>('baby_milestones', userId, milestoneId, milestoneData);
 export const deleteMilestone = (userId: string, milestoneId: string) => deleteLog('baby_milestones', userId, milestoneId);
+export const bulkAddMilestones = async (userId: string, childId: string, milestones: Omit<MilestoneEntry, 'id' | 'user_id' | 'childId' | 'created_at'>[]): Promise<MilestoneEntry[]> => {
+    const milestonesToInsert = milestones.map(m => ({ ...m, user_id: userId, child_id: childId }));
+    const { data, error } = await supabase.from('baby_milestones').insert(milestonesToInsert).select();
+    if (error) throw error;
+    return data;
+};
 
 // --- Vaccinations ---
 export const getVaccinations = async (userId: string, childId: string): Promise<VaccinationEntry[]> => {
