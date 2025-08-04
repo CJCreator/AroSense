@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
-import { FamilyMember, FoodLogEntry, LoggedFoodItem, MealType, COMMON_INDIAN_FIRST_FOODS, COMMON_FOOD_ALLERGENS } from '../types.ts';
+import { FamilyMember, FoodLogEntry, LoggedFoodItem, MealType } from '../types.ts';
 import PlusIcon from '../components/icons/PlusIcon.tsx';
 import EditIcon from '../components/icons/EditIcon.tsx';
 import TrashIcon from '../components/icons/TrashIcon.tsx';

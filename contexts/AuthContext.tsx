@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { AuthContextType, AppUser } from '../types.ts';
 import { supabase } from '../lib/supabaseClient.ts';
-import { User } from '@supabase/supabase-js';
+// Removed unused 'User' import
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 

@@ -1,7 +1,7 @@
 import {
     PregnancyProfile, PregnancySymptomEntry, WeightLogEntry, BloodPressureLogEntry,
     KickCountSession, PrenatalAppointment
-} from '../types';
+} from './types';
 
 // A generic helper to reduce repetition, assuming no childId is needed here.
 const getLocalStorageKey = (userId: string, dataType: string): string => {

@@ -4,7 +4,7 @@ import {
     FamilyMember, FeedingLogEntry, DiaperLogEntry, BabySleepLogEntry, GrowthRecordEntry,
     MilestoneEntry, VaccinationEntry,
     FEED_TYPES, FeedType, DIAPER_TYPES, DiaperType, MILESTONE_CATEGORIES, MilestoneCategory,
-    MOCK_VACCINE_SCHEDULE, VaccineInfo,
+    MOCK_VACCINE_SCHEDULE,
     BABY_AGE_THRESHOLD_YEARS, MOCK_MILESTONES_CHECKLIST, ActivityTypeForGamification
 } from '../types.ts';
 import BabyIcon from '../components/icons/BabyIcon.tsx';

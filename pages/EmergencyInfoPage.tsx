@@ -1,5 +1,3 @@
-
-
 import React, { useState, useEffect } from 'react';
 import { FamilyMember, Gender, EmergencyContact, BLOOD_TYPE_OPTIONS, RELATIONSHIP_OPTIONS } from '../types.ts';
 import QrCodeIcon from '../components/icons/QrCodeIcon.tsx';
@@ -90,7 +88,7 @@ const EmergencyInfoPage: React.FC = () => {
   useEffect(() => {
     if (currentUser) {
         setIsLoading(true);
-        familyMemberService.getFamilyMembers(currentUser.id, currentUser.user_metadata.name)
+        familyMemberService.getFamilyMembers(currentUser.id, currentUser.user_metadata.name || 'User')
             .then(members => {
                 const selfProfile = members.find(m => m.relationshipToUser === 'Self');
                 if (selfProfile) {
@@ -193,8 +191,8 @@ const EmergencyInfoPage: React.FC = () => {
         setIsEditing(false);
         setShowIncompleteProfileBanner(false);
         alert("Emergency information saved successfully!");
-      } catch (err) {
-        console.error(err);
+      } catch (_err) { // Renamed 'err' to '_err' to mark as unused
+        console.error(_err);
         alert("Failed to save changes. Please try again.");
       }
   };

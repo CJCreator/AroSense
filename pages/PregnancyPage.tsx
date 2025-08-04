@@ -1,13 +1,11 @@
-
-
 import React, { useState, useEffect, useMemo } from 'react';
 import PregnantWomanIcon from '../components/icons/PregnantWomanIcon.tsx';
 import PlusIcon from '../components/icons/PlusIcon.tsx';
 import EditIcon from '../components/icons/EditIcon.tsx';
 import TrashIcon from '../components/icons/TrashIcon.tsx';
 import {
-    PregnancyProfile, PregnancySymptomEntry, WeightLogEntry, BloodPressureLogEntry, GlucoseLogEntry,
-    KickCountSession, ContractionSession, ContractionEntry, PrenatalAppointment,
+    PregnancyProfile, PregnancySymptomEntry, WeightLogEntry, BloodPressureLogEntry,
+    KickCountSession, PrenatalAppointment,
     PREGNANCY_COMMON_SYMPTOMS, MOOD_OPTIONS
 } from '../types.ts';
 
@@ -50,8 +48,6 @@ const ProgressView: React.FC<{profile: PregnancyProfile | null, onUpdateProfile:
             return calculateWeeksBetween(profile.lmp, formatDate(new Date()));
         } else if (profile?.edd) {
             const today = new Date();
-            const eddDate = new Date(profile.edd);
-            // Calculate weeks remaining until EDD, then subtract from 40 (average pregnancy length)
             const weeksRemaining = calculateWeeksBetween(formatDate(today), profile.edd);
             return 40 - weeksRemaining;
         }

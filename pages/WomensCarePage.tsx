@@ -1,5 +1,3 @@
-
-
 import React, { useState, useEffect, useMemo } from 'react';
 import FemaleIcon from '../components/icons/FemaleIcon.tsx';
 import PlusIcon from '../components/icons/PlusIcon.tsx';
@@ -64,7 +62,7 @@ const PeriodTrackerView: React.FC = () => {
   });
   const [showPeriodModal, setShowPeriodModal] = useState(false);
   const [editingPeriod, setEditingPeriod] = useState<PeriodEntry | undefined>(undefined);
-  const [periodFormData, setPeriodFormData] = useState<{startDate: string, endDate: string, notes?: string}>({ startDate: formatDate(new Date()), endDate: formatDate(new Date()) });
+  const [periodFormData, setPeriodFormData] = useState<{startDate: string, endDate: string, notes?: string}>({ startDate: formatDate(new Date()), endDate: formatDate(new Date()), notes: '' });
 
   useEffect(() => {
     localStorage.setItem('womensCare_loggedPeriods', JSON.stringify(loggedPeriods));

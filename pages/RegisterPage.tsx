@@ -11,7 +11,7 @@ const RegisterPage: React.FC = () => {
   const [successMessage, setSuccessMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const auth = useAuth();
-  const navigate = useNavigate();
+  const _navigate = useNavigate(); // Renamed 'navigate' to '_navigate' to mark as unused
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

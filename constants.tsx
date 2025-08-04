@@ -1,4 +1,3 @@
-import React from 'react'; // React import needed if icons are used directly as JSX in this file, but here they are types.
 import { NavItem, BadgeDefinition, ActivityTypeForGamification } from './types.ts';
 
 import HomeIcon from './components/icons/HomeIcon.tsx';

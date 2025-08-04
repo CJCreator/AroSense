@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import HeartbeatIcon from '../components/icons/HeartbeatIcon.tsx';
 import PlusIcon from '../components/icons/PlusIcon.tsx';
 import EditIcon from '../components/icons/EditIcon.tsx';
@@ -13,7 +13,6 @@ import {
     MoodLog, MOOD_RATING_OPTIONS, MOOD_OPTIONS,
     WellnessResource, WellnessSummary, FamilyMember, ActivityTypeForGamification
 } from '../types.ts';
-import { DEFAULT_FAMILY_MEMBER_IMAGE } from '../constants.tsx'; 
 import { awardPoints, checkAndAwardBadges, updateStreak, incrementLogCount } from '../utils/gamificationUtils.ts';
 // import useLocalStorage from '/hooks/useLocalStorage'; // Replaced by service
 import * as wellnessService from '../services/wellnessService.ts'; // Import the service
@@ -41,7 +40,7 @@ const TabButton: React.FC<{ tabName: ActiveWellnessTab, currentTab: ActiveWellne
     ({ tabName, currentTab, onClick, children }) => (
         <button
             onClick={onClick}
-            className={`flex-shrink-0 px-3 py-2.5 text-sm font-medium rounded-t-lg transition-colors border-b-2
+            className={`flex-shrink-0 px-3 py-2.5 text-sm font-medium rounded-t-lg transition-colors
                     ${currentTab === tabName
                     ? 'border-primary text-primary bg-surface shadow-sm'
                     : 'border-transparent text-textSecondary hover:text-primary hover:bg-slate-50'}`}
@@ -263,7 +262,7 @@ const VitalsView: React.FC<{userId: string}> = ({userId}) => {
                         <input type="number" placeholder="Systolic (mmHg)" value={bpData.systolic || ''} onChange={e => setBpData(p => ({...p, systolic: parseInt(e.target.value)}))} className="form-input-wellness" required/>
                         <input type="number" placeholder="Diastolic (mmHg)" value={bpData.diastolic || ''} onChange={e => setBpData(p => ({...p, diastolic: parseInt(e.target.value)}))} className="form-input-wellness" required/>
                     </div>
-                    <input type="number" placeholder="Pulse (bpm, optional)" value={bpData.pulse || ''} onChange={e => setBpData(p => ({...p, pulse: parseInt(e.target.value)}))} className="form-input-wellness"/>
+                    <input type="number" placeholder="Pulse (optional)" value={bpData.pulse || ''} onChange={e => setBpData(p => ({...p, pulse: parseInt(e.target.value)}))} className="form-input-wellness"/>
                     <textarea placeholder="Notes (optional)" value={bpData.notes || ''} onChange={e => setBpData(p => ({...p, notes: e.target.value}))} className="form-input-wellness" rows={2}/>
                 </>)}
                 {currentVitalType === 'HR' && (<>

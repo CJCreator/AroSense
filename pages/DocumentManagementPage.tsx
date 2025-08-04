@@ -1,5 +1,3 @@
-
-
 import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { Document, FamilyMember } from '../types.ts';
 import UploadIcon from '../components/icons/UploadIcon.tsx';
@@ -38,7 +36,7 @@ const DocumentManagementPage: React.FC = () => {
     try {
         const [docs, members] = await Promise.all([
             documentService.getDocuments(currentUser.id),
-            familyMemberService.getFamilyMembers(currentUser.id, currentUser.user_metadata.name),
+            familyMemberService.getFamilyMembers(currentUser.id, currentUser.user_metadata.name || 'User'),
         ]);
         setDocuments(docs);
         const memberOptions = members.map(({ id, name }) => ({ id, name }));
@@ -250,7 +248,7 @@ const DocumentManagementPage: React.FC = () => {
             </div>
             <div className="mb-4">
               <label htmlFor="docType" className="block text-sm font-medium text-textSecondary mb-1">Document Type</label>
-              <input type="text" name="docType" id="docType" defaultValue={editingDocument?.type} list="commonDocTypes" placeholder="e.g., Lab Report" required className="w-full p-2.5 border border-slate-300 rounded-md focus:ring-primary focus:border-primary bg-white"/>
+              <input type="text" name="docType" id="docType" defaultValue={editingDocument?.type || ''} list="commonDocTypes" placeholder="e.g., Lab Report" required className="w-full p-2.5 border border-slate-300 rounded-md focus:ring-primary focus:border-primary bg-white"/>
               <datalist id="commonDocTypes">
                 {documentTypes.map(type => <option key={type} value={type} />)}
               </datalist>
