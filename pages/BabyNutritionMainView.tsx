@@ -37,7 +37,7 @@ const NutritionSubTabButton: React.FC<{tabName: NutritionSubTab, currentTab: Nut
 );
 
 
-const FoundationalNutritionView: React.FC<{childId: string}> = ({childId}) => {
+const FoundationalNutritionView: React.FC<{}> = () => {
     return (
         <div className="space-y-4 p-4 bg-slate-50 rounded-lg">
             <h3 className="text-lg font-semibold text-primary">Foundational Nutrition (0-6 Months)</h3>
@@ -335,7 +335,7 @@ const FoodDiaryView: React.FC<{childId: string, userId: string}> = ({childId, us
     );
 };
 
-const RecipesArticlesView: React.FC<{childId: string}> = ({childId}) => { 
+const RecipesArticlesView: React.FC<{}> = () => { 
     return (
         <div className="space-y-4 p-4 bg-slate-50 rounded-lg">
             <h3 className="text-lg font-semibold text-primary">Recipes & Educational Articles</h3>
@@ -378,9 +378,9 @@ const BabyNutritionMainView: React.FC<BabyNutritionMainViewProps> = ({ childId, 
   const renderSubTabContent = () => {
     if (!userId) return <p className="text-textSecondary p-4">User information not available.</p>;
     switch (activeSubTab) {
-      case 'guidance_0_6': return <FoundationalNutritionView childId={childId} />;
+      case 'guidance_0_6': return <FoundationalNutritionView />;
       case 'food_diary': return <FoodDiaryView childId={childId} userId={userId} />;
-      case 'recipes_articles': return <RecipesArticlesView childId={childId} />;
+      case 'recipes_articles': return <RecipesArticlesView />;
       case 'guidance_6_12': return <div className="p-4 text-textSecondary">Guidance for 6-12 months (complementary feeding, allergy info, meal planning) will be here.</div>;
       case 'guidance_1_3': return <div className="p-4 text-textSecondary">Guidance for 1-3 years (toddler nutrition, key nutrients, foods to limit) will be here.</div>;
       default: return <p>Select a sub-category.</p>;

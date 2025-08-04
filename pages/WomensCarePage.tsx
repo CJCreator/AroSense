@@ -144,7 +144,7 @@ const PeriodTrackerView: React.FC = () => {
     ovulationDate.setDate(ovulationDate.getDate() - 14); // Simplified: 14 days before next period
 
     const fertileWindowStartDate = new Date(ovulationDate);
-    fertileWindowStartDate.setDate(ovulationDate.getDate() - 5);
+    fertileWindowStartDate.setDate(fertileWindowStartDate.getDate() - 5);
     const fertileWindowEndDate = new Date(ovulationDate); // Ovulation day is fertile
 
     return { 
@@ -616,7 +616,7 @@ const ScreeningRemindersView: React.FC = () => {
 
 
 const EducationalResourcesView: React.FC = () => {
-    const [articles, setArticles] = useState<EducationalArticle[]>(() => {
+    const [articles] = useState<EducationalArticle[]>(() => {
         const saved = localStorage.getItem('womensCare_educationalArticles');
         if (saved) return JSON.parse(saved);
         return [ // Mock data
