@@ -1,5 +1,5 @@
 // Simple notification service using browser notifications and localStorage
-import { validateUserId } from '../utils/securityUtils';
+import { validateUserId, sanitizeForLog } from '../utils/securityUtils';
 
 interface Notification {
     id: string;
@@ -12,21 +12,35 @@ interface Notification {
     createdAt: string;
 }
 
-const STORAGE_KEY = 'arosense_notifications';
+const getStorageKey = () => {
+    const key = process.env.REACT_APP_NOTIFICATION_STORAGE_KEY;
+    if (!key) {
+        throw new Error('REACT_APP_NOTIFICATION_STORAGE_KEY environment variable is required');
+    }
+    return key;
+};
 
 const getNotifications = (userId: string): Notification[] => {
-    if (!validateUserId(userId)) return [];
-    
-    const stored = localStorage.getItem(STORAGE_KEY);
-    const all = stored ? JSON.parse(stored) : [];
-    return all.filter((n: Notification) => n.userId === userId);
+    try {
+        const validatedUserId = validateUserId(userId);
+        const stored = localStorage.getItem(getStorageKey());
+        const all = stored ? JSON.parse(stored) : [];
+        return all.filter((n: Notification) => n.userId === validatedUserId);
+    } catch (error) {
+        console.error('Failed to get notifications:', sanitizeForLog(error));
+        return [];
+    }
 };
 
 const saveNotifications = (notifications: Notification[]) => {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    const all = stored ? JSON.parse(stored) : [];
-    const filtered = all.filter((n: Notification) => !notifications.find(nn => nn.id === n.id));
-    localStorage.setItem(STORAGE_KEY, JSON.stringify([...filtered, ...notifications]));
+    try {
+        const stored = localStorage.getItem(getStorageKey());
+        const all = stored ? JSON.parse(stored) : [];
+        const filtered = all.filter((n: Notification) => !notifications.find(nn => nn.id === n.id));
+        localStorage.setItem(getStorageKey(), JSON.stringify([...filtered, ...notifications]));
+    } catch (error) {
+        console.error('Failed to save notifications:', sanitizeForLog(error));
+    }
 };
 
 export const getUserNotifications = async (userId: string): Promise<Notification[]> => {
@@ -38,7 +52,7 @@ export const addNotification = async (userId: string, notification: Omit<Notific
     
     const newNotification: Notification = {
         ...notification,
-        id: Date.now().toString(),
+        id: crypto.randomUUID(),
         userId,
         isRead: false,
         createdAt: new Date().toISOString()

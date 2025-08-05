@@ -16,18 +16,34 @@ const RegisterPage: React.FC = () => {
     e.preventDefault();
     setError('');
     setSuccessMessage('');
+    
     if (password !== confirmPassword) {
       setError('Passwords do not match.');
       return;
     }
+    
+    if (password.length < 8) {
+      setError('Password must be at least 8 characters long.');
+      return;
+    }
+    
+    if (!/(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/.test(password)) {
+      setError('Password must contain at least one uppercase letter, one lowercase letter, and one number.');
+      return;
+    }
+    
     setIsLoading(true);
-    const { success, error: authError } = await auth.register(name, email, password);
-    setIsLoading(false);
-    if (success) {
-      setSuccessMessage('Registration successful! Please check your email for a confirmation link to complete the process.');
-      // Don't navigate away, let the user see the success message.
-    } else {
-      setError(authError || 'Registration failed. Please try again.');
+    try {
+      const { success, error: authError } = await auth.register(name, email, password);
+      if (success) {
+        setSuccessMessage('Registration successful! Please check your email for a confirmation link to complete the process.');
+      } else {
+        setError(authError || 'Registration failed. Please try again.');
+      }
+    } catch (error) {
+      setError('An unexpected error occurred. Please try again.');
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -84,7 +100,7 @@ const RegisterPage: React.FC = () => {
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             required
-            minLength={6} // Basic validation
+            minLength={8} // Enhanced validation
             className="mt-1 block w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary sm:text-sm"
             placeholder="••••••••"
           />

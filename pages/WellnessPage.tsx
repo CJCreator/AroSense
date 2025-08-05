@@ -4,6 +4,7 @@ import * as wellnessService from '../services/wellnessService';
 import { VitalLog, WeightLogEntry, ActivityLog, SleepLog, HydrationLog, MoodLog } from '../types';
 import { PlusIcon } from '../components/icons/PlusIcon';
 import { HeartbeatIcon } from '../components/icons/HeartbeatIcon';
+import { sanitizeForLog } from '../utils/securityUtils';
 
 type WellnessTab = 'vitals' | 'weight' | 'activity' | 'sleep' | 'hydration' | 'mood';
 
@@ -39,7 +40,7 @@ const WellnessPage: React.FC = () => {
         setHydration(hydrationData);
         setMoods(moodsData);
       } catch (error) {
-        console.error('Failed to load wellness data:', error);
+        console.error('Failed to load wellness data:', sanitizeForLog(error));
       } finally {
         setIsLoading(false);
       }

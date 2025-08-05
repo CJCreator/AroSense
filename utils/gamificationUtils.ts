@@ -1,51 +1,56 @@
 import { UserPoints, BadgeDefinition, EarnedBadge, ActivityStreak, ActivityTypeForGamification } from '../types.ts';
 import { POINTS_ALLOCATION, INITIAL_BADGES } from '../constants.tsx';
-import { sanitizeForLog } from './securityUtils'; 
+import { sanitizeForLog } from './securityUtils';
+import { supabase } from '../src/integrations/supabase/client';
 
 const formatDate = (date: Date): string => date.toISOString().split('T')[0];
-
-const getKey = (userId: string, type: string) => `${userId}_${type}`;
-
-const getFromStorage = <T>(key: string, defaultValue: T): T => {
-    try {
-        const data = localStorage.getItem(key);
-        return data ? JSON.parse(data) : defaultValue;
-    } catch (error) {
-        console.error(`Error reading ${sanitizeForLog(key)} from localStorage`, sanitizeForLog(error));
-        return defaultValue;
-    }
-};
-
-const saveToStorage = <T>(key: string, value: T) => {
-    try {
-        localStorage.setItem(key, JSON.stringify(value));
-    } catch (error) {
-        console.error(`Error saving ${sanitizeForLog(key)} to localStorage`, sanitizeForLog(error));
-    }
-};
 
 
 // --- Point Management ---
 export const getUserPoints = async (userId: string): Promise<UserPoints> => {
   if (!userId) return { user_id: '', totalPoints: 0 };
-  const key = getKey(userId, 'gamification_user_points');
-  const defaultPoints = { user_id: userId, totalPoints: 0 };
-  const points = getFromStorage<UserPoints>(key, defaultPoints);
-  return Promise.resolve(points);
+  
+  try {
+    const { data, error } = await supabase
+      .from('user_points')
+      .select('*')
+      .eq('user_id', userId)
+      .single();
+    
+    if (error && error.code !== 'PGRST116') throw error;
+    return data ? { user_id: data.user_id, totalPoints: data.total_points } : { user_id: userId, totalPoints: 0 };
+  } catch (error) {
+    console.error('Failed to get user points:', sanitizeForLog(error));
+    return { user_id: userId, totalPoints: 0 };
+  }
 };
 
 export const awardPoints = async (userId: string, activityType: ActivityTypeForGamification, reason?: string): Promise<UserPoints> => {
-  if (!userId) return getUserPoints(''); 
+  if (!userId) return getUserPoints('');
   const pointsToAdd = POINTS_ALLOCATION[activityType] || 0;
   
   if (pointsToAdd > 0) {
-    const currentPoints = await getUserPoints(userId);
-    const updatedPoints = { ...currentPoints, totalPoints: currentPoints.totalPoints + pointsToAdd };
-    saveToStorage(getKey(userId, 'gamification_user_points'), updatedPoints);
-    
-    console.log(`Awarded ${pointsToAdd} points to ${sanitizeForLog(userId)} for ${sanitizeForLog(activityType)}. Reason: ${sanitizeForLog(reason || 'N/A')}.`);
-    window.dispatchEvent(new CustomEvent('gamificationUpdate'));
-    return updatedPoints;
+    try {
+      const currentPoints = await getUserPoints(userId);
+      const newTotal = currentPoints.totalPoints + pointsToAdd;
+      
+      const { data, error } = await supabase
+        .from('user_points')
+        .upsert({
+          user_id: userId,
+          total_points: newTotal
+        }, { onConflict: 'user_id' })
+        .select()
+        .single();
+      
+      if (error) throw error;
+      console.log(`Awarded ${pointsToAdd} points to ${sanitizeForLog(userId)} for ${sanitizeForLog(activityType)}`);
+      window.dispatchEvent(new CustomEvent('gamificationUpdate'));
+      return { user_id: data.user_id, totalPoints: data.total_points };
+    } catch (error) {
+      console.error('Failed to award points:', sanitizeForLog(error));
+      return getUserPoints(userId);
+    }
   }
   return getUserPoints(userId);
 };
@@ -54,80 +59,143 @@ let isDailyLaunchRunning = false;
 
 export const awardPointsForDailyLaunch = async (userId: string): Promise<void> => {
     if (!userId || isDailyLaunchRunning) return;
-    isDailyLaunchRunning = true; 
+    isDailyLaunchRunning = true;
 
     try {
-        const pointsData = await getUserPoints(userId);
         const todayStr = formatDate(new Date());
+        const { data } = await supabase
+            .from('user_points')
+            .select('last_daily_login_award_date')
+            .eq('user_id', userId)
+            .single();
 
-        if (pointsData.lastDailyLoginAwardDate !== todayStr) {
-            const updatedPoints = { ...pointsData, lastDailyLoginAwardDate: todayStr };
-            saveToStorage(getKey(userId, 'gamification_user_points'), updatedPoints);
+        if (!data || data.last_daily_login_award_date !== todayStr) {
+            await supabase
+                .from('user_points')
+                .upsert({ 
+                    user_id: userId, 
+                    last_daily_login_award_date: todayStr 
+                }, { onConflict: 'user_id' });
 
-            await awardPoints(userId, ActivityTypeForGamification.DAILY_APP_LAUNCH, 'Daily App Launch');
+            await awardPoints(userId, ActivityTypeForGamification.DAILY_APP_LAUNCH);
             
             const welcomeBadgeDef = INITIAL_BADGES.find(b => b.id === 'badge_welcome_aboard');
             if (welcomeBadgeDef && !(await hasBadge(userId, welcomeBadgeDef.id))) {
-                 await awardBadge(userId, welcomeBadgeDef);
+                await awardBadge(userId, welcomeBadgeDef);
             }
         }
     } catch (error) {
-        console.error("An error occurred during daily launch rewards:", sanitizeForLog(error));
+        console.error('Daily launch rewards error:', sanitizeForLog(error));
     } finally {
-        isDailyLaunchRunning = false; 
+        isDailyLaunchRunning = false;
     }
 };
 
 // --- Log Count Management ---
 export const getLogCount = async (userId: string, activityType: ActivityTypeForGamification): Promise<number> => {
     if (!userId) return 0;
-    const key = getKey(userId, 'gamification_log_counts');
-    const allCounts = getFromStorage<Record<ActivityTypeForGamification, number>>(key, {} as Record<ActivityTypeForGamification, number>);
-    return Promise.resolve(allCounts[activityType] || 0);
+    
+    try {
+        const { data, error } = await supabase
+            .from('activity_log_counts')
+            .select('count')
+            .eq('user_id', userId)
+            .eq('activity_type', activityType)
+            .single();
+        
+        if (error && error.code !== 'PGRST116') throw error;
+        return data?.count || 0;
+    } catch (error) {
+        console.error('Failed to get log count:', sanitizeForLog(error));
+        return 0;
+    }
 };
 
 export const incrementLogCount = async (userId: string, activityType: ActivityTypeForGamification): Promise<number> => {
     if (!userId) return 0;
-    const key = getKey(userId, 'gamification_log_counts');
-    const allCounts = getFromStorage<Record<ActivityTypeForGamification, number>>(key, {} as Record<ActivityTypeForGamification, number>);
-    const newCount = (allCounts[activityType] || 0) + 1;
-    allCounts[activityType] = newCount;
-    saveToStorage(key, allCounts);
     
-    console.log(`Incremented log count for ${sanitizeForLog(activityType)} for ${sanitizeForLog(userId)}. New count: ${newCount}`);
-    return Promise.resolve(newCount);
+    try {
+        const currentCount = await getLogCount(userId, activityType);
+        const newCount = currentCount + 1;
+        
+        const { data, error } = await supabase
+            .from('activity_log_counts')
+            .upsert({
+                user_id: userId,
+                activity_type: activityType,
+                count: newCount
+            }, { onConflict: 'user_id,activity_type' })
+            .select('count')
+            .single();
+        
+        if (error) throw error;
+        console.log(`Incremented log count for ${sanitizeForLog(activityType)}. New count: ${data.count}`);
+        return data.count;
+    } catch (error) {
+        console.error('Failed to increment log count:', sanitizeForLog(error));
+        return 0;
+    }
 };
 
 // --- Badge Management ---
 export const getEarnedBadges = async (userId: string): Promise<EarnedBadge[]> => {
   if (!userId) return [];
-  const key = getKey(userId, 'gamification_earned_badges');
-  const badges = getFromStorage<EarnedBadge[]>(key, []);
-  return Promise.resolve(badges);
+  
+  try {
+    const { data, error } = await supabase
+      .from('earned_badges')
+      .select('*')
+      .eq('user_id', userId)
+      .order('earned_date', { ascending: false });
+    
+    if (error) throw error;
+    return data ? data.map(badge => ({
+      user_id: badge.user_id,
+      badgeId: badge.badge_id,
+      earnedDate: badge.earned_date
+    })) : [];
+  } catch (error) {
+    console.error('Failed to get earned badges:', sanitizeForLog(error));
+    return [];
+  }
 };
 
 export const hasBadge = async (userId: string, badgeId: string): Promise<boolean> => {
   if (!userId) return false;
-  const earnedBadges = await getEarnedBadges(userId);
-  return earnedBadges.some(b => b.badgeId === badgeId);
+  
+  try {
+    const { data, error } = await supabase
+      .from('earned_badges')
+      .select('id')
+      .eq('user_id', userId)
+      .eq('badge_id', badgeId)
+      .single();
+    
+    return !error && !!data;
+  } catch (error) {
+    return false;
+  }
 };
 
 const awardBadge = async (userId: string, badgeDef: BadgeDefinition): Promise<void> => {
   if (!userId || await hasBadge(userId, badgeDef.id)) return;
 
-  const newEarnedBadge: EarnedBadge = { user_id: userId, badgeId: badgeDef.id, earnedDate: formatDate(new Date()) };
-  const earnedBadges = await getEarnedBadges(userId);
-  earnedBadges.push(newEarnedBadge);
-  saveToStorage(getKey(userId, 'gamification_earned_badges'), earnedBadges);
-  
-  let alertMessage = `Congratulations! You've earned the "${badgeDef.name}" badge! ${badgeDef.icon}`;
-  if (badgeDef.rewardMessage) {
-      alertMessage += `\n\n${badgeDef.rewardMessage}`;
+  try {
+    const { error } = await supabase
+      .from('earned_badges')
+      .insert({
+        user_id: userId,
+        badge_id: badgeDef.id,
+        earned_date: formatDate(new Date())
+      });
+    
+    if (error) throw error;
+    
+    console.log(`Awarded badge "${sanitizeForLog(badgeDef.name)}" to ${sanitizeForLog(userId)}`);
+    window.dispatchEvent(new CustomEvent('gamificationUpdate'));
+  } catch (error) {
+    console.error('Failed to award badge:', sanitizeForLog(error));
   }
-  alert(alertMessage); 
-
-  console.log(`Awarded badge "${sanitizeForLog(badgeDef.name)}" to ${sanitizeForLog(userId)}`);
-  window.dispatchEvent(new CustomEvent('gamificationUpdate'));
 };
 
 export const checkAndAwardBadges = async (userId: string, newlyPerformedActivityType?: ActivityTypeForGamification): Promise<void> => {
@@ -174,40 +242,73 @@ export const checkAndAwardBadges = async (userId: string, newlyPerformedActivity
 // --- Streak Management ---
 export const getActivityStreak = async (userId: string, activityType: ActivityTypeForGamification): Promise<ActivityStreak> => {
   if (!userId) return { user_id: '', activityType, currentStreak: 0, longestStreak: 0, lastLogDate: '' };
-  const key = getKey(userId, `gamification_streak_${activityType}`);
-  const defaultStreak = { user_id: userId, activityType, currentStreak: 0, longestStreak: 0, lastLogDate: '' };
-  const streak = getFromStorage<ActivityStreak>(key, defaultStreak);
-  return Promise.resolve(streak);
+  
+  try {
+    const { data, error } = await supabase
+      .from('activity_streaks')
+      .select('*')
+      .eq('user_id', userId)
+      .eq('activity_type', activityType)
+      .single();
+    
+    if (error && error.code !== 'PGRST116') throw error;
+    return data ? {
+      user_id: data.user_id,
+      activityType,
+      currentStreak: data.current_streak,
+      longestStreak: data.longest_streak,
+      lastLogDate: data.last_log_date
+    } : { user_id: userId, activityType, currentStreak: 0, longestStreak: 0, lastLogDate: '' };
+  } catch (error) {
+    console.error('Failed to get activity streak:', sanitizeForLog(error));
+    return { user_id: userId, activityType, currentStreak: 0, longestStreak: 0, lastLogDate: '' };
+  }
 };
 
 export const updateStreak = async (userId: string, activityType: ActivityTypeForGamification): Promise<ActivityStreak> => {
   if (!userId) return getActivityStreak('', activityType);
-  const streakData = await getActivityStreak(userId, activityType);
+  
   const todayStr = formatDate(new Date());
-
-  if (streakData.lastLogDate === todayStr) {
-    return streakData; // Already updated today
-  }
-
-  const yesterdayStr = formatDate(new Date(Date.now() - 86400000)); 
-
-  if (streakData.lastLogDate === yesterdayStr) {
-    streakData.currentStreak += 1; // Continue streak
-  } else {
-    streakData.currentStreak = 1; // Reset streak
-  }
-
-  streakData.lastLogDate = todayStr;
-  if (streakData.currentStreak > streakData.longestStreak) {
-    streakData.longestStreak = streakData.currentStreak;
-  }
+  const yesterdayStr = formatDate(new Date(Date.now() - 86400000));
   
-  saveToStorage(getKey(userId, `gamification_streak_${activityType}`), streakData);
-  
-  console.log(`Updated streak for ${sanitizeForLog(activityType)} for ${sanitizeForLog(userId)}. Current: ${streakData.currentStreak}, Longest: ${streakData.longestStreak}`);
-  window.dispatchEvent(new CustomEvent('gamificationUpdate'));
-  
-  return streakData;
+  try {
+    const streakData = await getActivityStreak(userId, activityType);
+    
+    if (streakData.lastLogDate === todayStr) {
+      return streakData; // Already updated today
+    }
+    
+    const newCurrentStreak = streakData.lastLogDate === yesterdayStr ? streakData.currentStreak + 1 : 1;
+    const newLongestStreak = Math.max(newCurrentStreak, streakData.longestStreak);
+    
+    const { data, error } = await supabase
+      .from('activity_streaks')
+      .upsert({
+        user_id: userId,
+        activity_type: activityType,
+        current_streak: newCurrentStreak,
+        longest_streak: newLongestStreak,
+        last_log_date: todayStr
+      }, { onConflict: 'user_id,activity_type' })
+      .select()
+      .single();
+    
+    if (error) throw error;
+    
+    console.log(`Updated streak for ${sanitizeForLog(activityType)}. Current: ${newCurrentStreak}, Longest: ${newLongestStreak}`);
+    window.dispatchEvent(new CustomEvent('gamificationUpdate'));
+    
+    return {
+      user_id: data.user_id,
+      activityType,
+      currentStreak: data.current_streak,
+      longestStreak: data.longest_streak,
+      lastLogDate: data.last_log_date
+    };
+  } catch (error) {
+    console.error('Failed to update streak:', sanitizeForLog(error));
+    return getActivityStreak(userId, activityType);
+  }
 };
 
 export const dispatchGamificationUpdate = () => {

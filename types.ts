@@ -21,29 +21,36 @@ export interface EmergencyContact {
 }
 
 export interface FamilyMember {
-  id:string;
-  user_id?: string; // Foreign key to auth.users
+  id: string;
+  user_id: string;
   name: string;
-  dateOfBirth: string;
-  gender: Gender;
+  relationship: 'child' | 'spouse' | 'parent' | 'sibling' | 'other';
+  date_of_birth?: string;
+  gender?: 'male' | 'female' | 'other';
+  blood_type?: 'A+' | 'A-' | 'B+' | 'B-' | 'AB+' | 'AB-' | 'O+' | 'O-';
+  height_cm?: number;
+  medical_notes?: string;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+  
+  // Legacy fields for backward compatibility
+  dateOfBirth?: string;
   bloodType?: string;
   allergies?: string[];
   medicalConditions?: string[];
   medications?: string[];
   emergencyContacts?: EmergencyContact[];
   profileImageUrl?: string;
-  relationshipToUser?: string; 
+  relationshipToUser?: string;
   primaryCarePhysician?: { name: string; phone: string };
   insuranceInfo?: { provider: string; policyId: string };
   emergencyNotes?: string;
-  heightCm?: number; // Added for BMI calculation
-
-  // Baby Care Specific Enhancements
   birthWeightKg?: number;
   birthHeightCm?: number;
   birthHeadCircumferenceCm?: number;
   isPremature?: boolean;
-  gestationalAgeWeeks?: number; // if premature
+  gestationalAgeWeeks?: number;
 }
 
 export interface Document {

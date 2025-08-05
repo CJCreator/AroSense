@@ -7,3 +7,4 @@ const HeartbeatIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
   </svg>
 );
 export default HeartbeatIcon;
+export { HeartbeatIcon };

@@ -1,5 +1,12 @@
 import { supabase } from '../src/integrations/supabase/client';
-import { validateUserId } from '../utils/securityUtils';
+import { validateUserId, sanitizeForLog } from '../utils/securityUtils';
+
+interface EmergencyData {
+  name: string;
+  blood_type?: string;
+  allergies?: string[];
+  emergency_contacts?: Array<{ phone: string }>;
+}
 
 export const getEmergencyInfo = async (userId: string) => {
     if (!validateUserId(userId)) return null;
@@ -15,7 +22,7 @@ export const getEmergencyInfo = async (userId: string) => {
     return data;
 };
 
-export const generateQRCode = (emergencyData: any): string => {
+export const generateQRCode = (emergencyData: EmergencyData): string => {
     const vCardData = `BEGIN:VCARD
 VERSION:3.0
 FN:${emergencyData.name}

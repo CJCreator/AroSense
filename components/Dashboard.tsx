@@ -62,9 +62,13 @@ const Dashboard: React.FC = () => {
 
     // Load gamification data
     const loadGamificationData = async () => {
-        setUserPoints(await getUserPoints(currentUser.id));
-        setEarnedBadges(await getEarnedBadges(currentUser.id));
-        setWaterStreak(await getActivityStreak(currentUser.id, ActivityTypeForGamification.LOG_WATER_WELLNESS)); 
+        try {
+            setUserPoints(await getUserPoints(currentUser.id));
+            setEarnedBadges(await getEarnedBadges(currentUser.id));
+            setWaterStreak(await getActivityStreak(currentUser.id, ActivityTypeForGamification.LOG_WATER_WELLNESS));
+        } catch (error) {
+            console.error('Failed to load gamification data:', sanitizeForLog(error));
+        }
     }
     
     loadGamificationData();
@@ -105,10 +109,10 @@ const Dashboard: React.FC = () => {
                 <p className="text-sm text-textSecondary font-medium">Badges Earned</p>
                 {earnedBadges.length > 0 ? (
                     <div className="flex justify-center items-center space-x-2 mt-2">
-                        {earnedBadges.slice(0, 4).map(eb => {
-                            const badgeDef = getBadgeDefinition(eb.badgeId);
+                        {earnedBadges.slice(0, 4).map(earnedBadge => {
+                            const badgeDef = getBadgeDefinition(earnedBadge.badgeId);
                             return badgeDef ? (
-                                <span key={eb.badgeId} title={badgeDef.name} className="text-2xl cursor-default">{badgeDef.icon}</span>
+                                <span key={earnedBadge.badgeId} title={badgeDef.name} className="text-2xl cursor-default">{badgeDef.icon}</span>
                             ) : null;
                         })}
                         {earnedBadges.length > 4 && <span className="text-xs text-textSecondary">+{earnedBadges.length - 4} more</span>}
