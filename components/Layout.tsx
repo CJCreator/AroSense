@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useState } from 'react';
 import Sidebar from './Sidebar.tsx';
 import Header from './Header.tsx';
+import QuickActions from './QuickActions';
 import { Outlet, useLocation } from 'react-router-dom';
 
 const getPageBackgroundClass = (pathname: string): string => {
@@ -25,6 +26,7 @@ const getPageBackgroundClass = (pathname: string): string => {
 const Layout: React.FC = () => {
   const location = useLocation();
   const backgroundClass = getPageBackgroundClass(location.pathname);
+  const [refreshKey, setRefreshKey] = useState(0);
 
   return (
     <div className="flex h-screen bg-background text-textPrimary">
@@ -32,8 +34,13 @@ const Layout: React.FC = () => {
       <div className="flex-1 flex flex-col overflow-hidden">
         <Header />
         <main className={`flex-1 overflow-x-hidden overflow-y-auto p-4 sm:p-6 ${backgroundClass}`}>
-          <Outlet />
+          <Outlet key={refreshKey} />
         </main>
+        
+        {/* Quick Actions - only show on main pages, not auth pages */}
+        {!location.pathname.includes('/login') && !location.pathname.includes('/register') && (
+          <QuickActions onDataUpdate={() => setRefreshKey(prev => prev + 1)} />
+        )}
       </div>
     </div>
   );

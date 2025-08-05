@@ -1,7 +1,56 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
+import { useAuth } from '../contexts/AuthContext';
 import SettingsIcon from '../components/icons/SettingsIcon.tsx';
+import DataExport from '../components/DataExport';
+import * as womensHealthService from '../services/womensHealthServicePhase2';
+import * as pregnancyService from '../services/pregnancyServicePhase2';
+import * as babyCareService from '../services/babyCareServicePhase2';
+import * as familyMemberService from '../services/familyMemberService';
+import type { MenstrualCycle, PregnancyProfile, VaccinationSchedule, SymptomsDiary } from '../types/phase2Types';
 
 const SettingsPage: React.FC = () => {
+  const { currentUser } = useAuth();
+  const [exportData, setExportData] = useState<{
+    cycles: MenstrualCycle[];
+    pregnancyProfile: PregnancyProfile | null;
+    symptoms: SymptomsDiary[];
+    vaccinations: VaccinationSchedule[];
+  }>({ cycles: [], pregnancyProfile: null, symptoms: [], vaccinations: [] });
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    if (!currentUser) return;
+    
+    const loadExportData = async () => {
+      try {
+        const [cycles, pregnancyProfile, symptoms, familyMembers] = await Promise.all([
+          womensHealthService.getMenstrualCycles().catch(() => []),
+          pregnancyService.getActivePregnancyProfile().catch(() => null),
+          womensHealthService.getSymptomsDiary().catch(() => []),
+          familyMemberService.getFamilyMembers(currentUser.id, currentUser.user_metadata.name || 'User').catch(() => [])
+        ]);
+        
+        // Get vaccinations for all children
+        const children = familyMembers.filter(member => {
+          const age = new Date().getFullYear() - new Date(member.dateOfBirth).getFullYear();
+          return age <= 5;
+        });
+        
+        const allVaccinations = children.length > 0 ? 
+          (await Promise.all(children.map(child => 
+            babyCareService.getVaccinationSchedules(child.id).catch(() => [])
+          ))).flat() : [];
+        
+        setExportData({ cycles, pregnancyProfile, symptoms, vaccinations: allVaccinations });
+      } catch (error) {
+        console.error('Failed to load export data:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadExportData();
+  }, [currentUser]);
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
@@ -53,7 +102,25 @@ const SettingsPage: React.FC = () => {
                     </div>
                 </div>
             </section>
-             <p className="text-textSecondary pt-4 border-t border-slate-200">More settings for data export, privacy controls, and theme customization will appear here as features are developed.</p>
+            {/* Data Export Section */}
+            <section>
+                <h4 className="text-lg font-medium text-textPrimary border-b pb-2 mb-4">Data Export</h4>
+                {isLoading ? (
+                  <div className="flex items-center space-x-2">
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary"></div>
+                    <span className="text-textSecondary">Loading export options...</span>
+                  </div>
+                ) : (
+                  <DataExport 
+                    cycles={exportData.cycles}
+                    pregnancyProfile={exportData.pregnancyProfile}
+                    symptoms={exportData.symptoms}
+                    vaccinations={exportData.vaccinations}
+                  />
+                )}
+            </section>
+
+             <p className="text-textSecondary pt-4 border-t border-slate-200">More settings for privacy controls and theme customization will appear here as features are developed.</p>
         </div>
 
       </div>
