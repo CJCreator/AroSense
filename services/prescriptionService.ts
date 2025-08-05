@@ -1,8 +1,9 @@
 import { Prescription } from '../types';
-import { supabase } from '../integrations/supabase/client';
+import { supabase } from '../src/integrations/supabase/client';
+import { validateUserId, validateId } from '../utils/securityUtils';
 
 export const getPrescriptions = async (userId: string): Promise<Prescription[]> => {
-    if (!userId) return [];
+    if (!validateUserId(userId)) return [];
     const { data, error } = await supabase
         .from('prescriptions')
         .select('*')
@@ -14,7 +15,7 @@ export const getPrescriptions = async (userId: string): Promise<Prescription[]> 
 };
 
 export const addPrescription = async (userId: string, prescriptionData: Partial<Prescription>): Promise<Prescription> => {
-    if (!userId) throw new Error("User not authenticated.");
+    if (!validateUserId(userId)) throw new Error("Invalid user ID.");
     const { data, error } = await supabase
         .from('prescriptions')
         .insert({ ...prescriptionData, user_id: userId })
@@ -26,7 +27,7 @@ export const addPrescription = async (userId: string, prescriptionData: Partial<
 };
 
 export const updatePrescription = async (userId: string, prescriptionId: string, prescriptionData: Partial<Prescription>): Promise<Prescription> => {
-    if (!userId) throw new Error("User not authenticated.");
+    if (!validateUserId(userId) || !validateId(prescriptionId)) throw new Error("Invalid user ID or prescription ID.");
     const { data, error } = await supabase
         .from('prescriptions')
         .update(prescriptionData)
@@ -40,7 +41,7 @@ export const updatePrescription = async (userId: string, prescriptionId: string,
 };
 
 export const deletePrescription = async (userId: string, prescriptionId: string): Promise<void> => {
-    if (!userId) throw new Error("User not authenticated.");
+    if (!validateUserId(userId) || !validateId(prescriptionId)) throw new Error("Invalid user ID or prescription ID.");
     const { error } = await supabase
         .from('prescriptions')
         .delete()

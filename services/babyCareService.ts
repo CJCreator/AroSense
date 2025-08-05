@@ -1,4 +1,4 @@
-import { supabase } from '../integrations/supabase/client';
+import { supabase } from '../src/integrations/supabase/client';
 import {
     FeedingLogEntry, DiaperLogEntry, BabySleepLogEntry, GrowthRecordEntry, MilestoneEntry,
     VaccinationEntry, FoodLogEntry

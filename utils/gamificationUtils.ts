@@ -1,5 +1,6 @@
 import { UserPoints, BadgeDefinition, EarnedBadge, ActivityStreak, ActivityTypeForGamification } from '../types.ts';
-import { POINTS_ALLOCATION, INITIAL_BADGES } from '../constants.tsx'; 
+import { POINTS_ALLOCATION, INITIAL_BADGES } from '../constants.tsx';
+import { sanitizeForLog } from './securityUtils'; 
 
 const formatDate = (date: Date): string => date.toISOString().split('T')[0];
 
@@ -10,7 +11,7 @@ const getFromStorage = <T>(key: string, defaultValue: T): T => {
         const data = localStorage.getItem(key);
         return data ? JSON.parse(data) : defaultValue;
     } catch (error) {
-        console.error(`Error reading ${key} from localStorage`, error);
+        console.error(`Error reading ${sanitizeForLog(key)} from localStorage`, sanitizeForLog(error));
         return defaultValue;
     }
 };
@@ -19,7 +20,7 @@ const saveToStorage = <T>(key: string, value: T) => {
     try {
         localStorage.setItem(key, JSON.stringify(value));
     } catch (error) {
-        console.error(`Error saving ${key} to localStorage`, error);
+        console.error(`Error saving ${sanitizeForLog(key)} to localStorage`, sanitizeForLog(error));
     }
 };
 
@@ -42,7 +43,7 @@ export const awardPoints = async (userId: string, activityType: ActivityTypeForG
     const updatedPoints = { ...currentPoints, totalPoints: currentPoints.totalPoints + pointsToAdd };
     saveToStorage(getKey(userId, 'gamification_user_points'), updatedPoints);
     
-    console.log(`Awarded ${pointsToAdd} points to ${userId} for ${activityType}. Reason: ${reason || 'N/A'}.`);
+    console.log(`Awarded ${pointsToAdd} points to ${sanitizeForLog(userId)} for ${sanitizeForLog(activityType)}. Reason: ${sanitizeForLog(reason || 'N/A')}.`);
     window.dispatchEvent(new CustomEvent('gamificationUpdate'));
     return updatedPoints;
   }
@@ -71,7 +72,7 @@ export const awardPointsForDailyLaunch = async (userId: string): Promise<void> =
             }
         }
     } catch (error) {
-        console.error("An error occurred during daily launch rewards:", error);
+        console.error("An error occurred during daily launch rewards:", sanitizeForLog(error));
     } finally {
         isDailyLaunchRunning = false; 
     }
@@ -93,7 +94,7 @@ export const incrementLogCount = async (userId: string, activityType: ActivityTy
     allCounts[activityType] = newCount;
     saveToStorage(key, allCounts);
     
-    console.log(`Incremented log count for ${activityType} for ${userId}. New count: ${newCount}`);
+    console.log(`Incremented log count for ${sanitizeForLog(activityType)} for ${sanitizeForLog(userId)}. New count: ${newCount}`);
     return Promise.resolve(newCount);
 };
 
@@ -125,7 +126,7 @@ const awardBadge = async (userId: string, badgeDef: BadgeDefinition): Promise<vo
   }
   alert(alertMessage); 
 
-  console.log(`Awarded badge "${badgeDef.name}" to ${userId}`);
+  console.log(`Awarded badge "${sanitizeForLog(badgeDef.name)}" to ${sanitizeForLog(userId)}`);
   window.dispatchEvent(new CustomEvent('gamificationUpdate'));
 };
 
@@ -203,7 +204,7 @@ export const updateStreak = async (userId: string, activityType: ActivityTypeFor
   
   saveToStorage(getKey(userId, `gamification_streak_${activityType}`), streakData);
   
-  console.log(`Updated streak for ${activityType} for ${userId}. Current: ${streakData.currentStreak}, Longest: ${streakData.longestStreak}`);
+  console.log(`Updated streak for ${sanitizeForLog(activityType)} for ${sanitizeForLog(userId)}. Current: ${streakData.currentStreak}, Longest: ${streakData.longestStreak}`);
   window.dispatchEvent(new CustomEvent('gamificationUpdate'));
   
   return streakData;

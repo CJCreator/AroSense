@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'; // Import useNavigate
 import StarIcon from '../components/icons/StarIcon.tsx';
 import { INITIAL_BADGES } from '../constants.tsx'; 
 import { UserPoints, EarnedBadge, ActivityStreak, BadgeDefinition, ActivityTypeForGamification } from '../types.ts';
-import { getUserPoints, getEarnedBadges, getActivityStreak } from '../utils/gamificationUtils.ts';
+import * as gamificationService from '../services/gamificationService';
 import { useAuth } from '../contexts/AuthContext.tsx'; 
 
 const WellnessRewardsPage: React.FC = () => {
@@ -25,14 +25,15 @@ const WellnessRewardsPage: React.FC = () => {
     const loadGamificationData = async () => {
         setIsLoading(true);
         try {
-            const pointsData = await getUserPoints(userId);
+            const [pointsData, badgesData, streaksData] = await Promise.all([
+                gamificationService.getUserPoints(userId),
+                gamificationService.getEarnedBadges(userId),
+                gamificationService.getActivityStreaks(userId)
+            ]);
             setUserPoints(pointsData);
-
-            const badgesData = await getEarnedBadges(userId);
             setEarnedBadges(badgesData);
-
-            const streakData = await getActivityStreak(userId, ActivityTypeForGamification.LOG_WATER_WELLNESS);
-            setWaterStreak(streakData);
+            const waterStreakData = streaksData.find(s => s.activity_type === 'LOG_WATER_WELLNESS');
+            setWaterStreak(waterStreakData || { currentStreak: 0, longestStreak: 0 });
         } catch (error) {
             console.error("Failed to load gamification data:", error);
         } finally {

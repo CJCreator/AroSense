@@ -1,4 +1,4 @@
-import { supabase } from '../integrations/supabase/client';
+import { supabase } from '../src/integrations/supabase/client';
 import { 
     VitalLog, WeightLogEntry, ActivityLog, SleepLog, HydrationLog, MoodLog,
     WeightGoal, ActivityGoal, HydrationGoal, WellnessResource 
@@ -121,10 +121,30 @@ export const deleteMoodLog = async (userId: string, logId: string): Promise<void
 
 // --- Wellness Resources Service (Global, not user-specific) ---
 export const getWellnessResources = async (): Promise<WellnessResource[]> => {
-    // This can be migrated to a Supabase table later if needed
     return Promise.resolve([
         { id: 'res1', title: 'Understanding Blood Pressure', category: 'Vitals', summary: 'Learn what the numbers mean and how to maintain a healthy BP.'},
         { id: 'res2', title: 'Benefits of Daily Activity', category: 'Activity', summary: 'Discover how even small amounts of daily exercise can improve your health.'},
         { id: 'res3', title: 'The Importance of Hydration', category: 'Hydration', summary: 'Why drinking enough water is crucial for your body and mind.'}
     ]);
+};
+
+// --- Wellness Summary Service ---
+export const getWellnessSummary = async (userId: string): Promise<any> => {
+    if (!userId) return null;
+    
+    const [vitals, weights, activities, hydration, moods] = await Promise.all([
+        getVitals(userId),
+        getWeightLogs(userId), 
+        getActivityLogs(userId),
+        getHydrationLogs(userId),
+        getMoodLogs(userId)
+    ]);
+    
+    return {
+        lastBP: vitals.find(v => v.type === 'BloodPressure'),
+        currentWeight: weights[0],
+        todayActivityProgress: { logged: activities.filter(a => a.date === new Date().toISOString().split('T')[0]).length, goal: 1, unit: 'activities' },
+        todayHydrationProgress: { logged: hydration.filter(h => h.date === new Date().toISOString().split('T')[0]).reduce((sum, h) => sum + h.amount, 0), goal: 2000, unit: 'ml' },
+        lastMood: moods[0]
+    };
 };

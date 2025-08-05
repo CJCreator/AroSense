@@ -1,72 +1,95 @@
-import { Document } from '../types.ts';
+import { Document } from '../types';
+import { supabase } from '../src/integrations/supabase/client';
+import { validateUserId } from '../utils/securityUtils';
 
-const getDocumentsFromStorage = (userId: string): Document[] => {
-    const data = localStorage.getItem(`${userId}_documents`);
-    return data ? JSON.parse(data) : [];
-};
-
-const saveDocumentsToStorage = (userId: string, documents: Document[]) => {
-    localStorage.setItem(`${userId}_documents`, JSON.stringify(documents));
-};
-
-const fileToDataUrl = (file: File): Promise<string> => {
-    return new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = () => resolve(reader.result as string);
-        reader.onerror = error => reject(error);
-        reader.readAsDataURL(file);
-    });
+const uploadFileToStorage = async (file: File, userId: string): Promise<string> => {
+    const fileExt = file.name.split('.').pop();
+    const fileName = `${userId}/${Date.now()}.${fileExt}`;
+    
+    const { data, error } = await supabase.storage
+        .from('documents')
+        .upload(fileName, file);
+    
+    if (error) throw error;
+    
+    const { data: { publicUrl } } = supabase.storage
+        .from('documents')
+        .getPublicUrl(fileName);
+    
+    return publicUrl;
 };
 
 export const getDocuments = async (userId: string): Promise<Document[]> => {
-    return Promise.resolve(getDocumentsFromStorage(userId));
+    if (!validateUserId(userId)) return [];
+    
+    const { data, error } = await supabase
+        .from('documents')
+        .select('*')
+        .eq('user_id', userId)
+        .order('upload_date', { ascending: false });
+    
+    if (error) throw error;
+    return data as Document[];
 };
 
 export const addDocument = async (userId: string, docData: { name: string; type: string; familyMemberId: string }, file: File): Promise<Document> => {
-    const fileUrl = await fileToDataUrl(file);
-    const allDocs = getDocumentsFromStorage(userId);
+    if (!validateUserId(userId)) throw new Error("Invalid user ID");
     
-    const newDoc: Document = {
-        id: Date.now().toString(),
+    const fileUrl = await uploadFileToStorage(file, userId);
+    
+    const newDoc = {
         user_id: userId,
         name: docData.name,
         type: docData.type,
-        familyMemberId: docData.familyMemberId === '0' ? undefined : docData.familyMemberId,
-        fileUrl: fileUrl,
-        version: 1,
-        uploadDate: new Date().toISOString(),
+        family_member_id: docData.familyMemberId === '0' ? null : docData.familyMemberId,
+        file_url: fileUrl,
+        version: 1
     };
 
-    allDocs.push(newDoc);
-    saveDocumentsToStorage(userId, allDocs);
-    return newDoc;
+    const { data, error } = await supabase
+        .from('documents')
+        .insert(newDoc)
+        .select()
+        .single();
+    
+    if (error) throw error;
+    return data as Document;
 };
 
 export const updateDocument = async (userId: string, docId: string, docData: { name:string; type:string; familyMemberId:string }, file?: File): Promise<Document> => {
-    const allDocs = getDocumentsFromStorage(userId);
-    const docIndex = allDocs.findIndex(doc => doc.id === docId);
-
-    if (docIndex === -1) {
-        throw new Error("Document not found.");
-    }
-
-    const currentDoc = allDocs[docIndex];
-    const updatedDoc = { ...currentDoc, name: docData.name, type: docData.type, familyMemberId: docData.familyMemberId === '0' ? undefined : docData.familyMemberId };
-
+    if (!validateUserId(userId)) throw new Error("Invalid user ID");
+    
+    let updateData: any = {
+        name: docData.name,
+        type: docData.type,
+        family_member_id: docData.familyMemberId === '0' ? null : docData.familyMemberId
+    };
+    
     if (file) {
-        updatedDoc.fileUrl = await fileToDataUrl(file);
-        updatedDoc.version = (updatedDoc.version || 1) + 1;
-        updatedDoc.uploadDate = new Date().toISOString();
+        updateData.file_url = await uploadFileToStorage(file, userId);
+        updateData.version = supabase.raw('version + 1');
     }
     
-    allDocs[docIndex] = updatedDoc;
-    saveDocumentsToStorage(userId, allDocs);
-    return updatedDoc;
+    const { data, error } = await supabase
+        .from('documents')
+        .update(updateData)
+        .eq('id', docId)
+        .eq('user_id', userId)
+        .select()
+        .single();
+    
+    if (error) throw error;
+    return data as Document;
 };
 
-export const deleteDocument = async (userId: string, docToDelete: Document): Promise<void> => {
-    let allDocs = getDocumentsFromStorage(userId);
-    allDocs = allDocs.filter(doc => doc.id !== docToDelete.id);
-    saveDocumentsToStorage(userId, allDocs);
-    return Promise.resolve();
+export const deleteDocument = async (userId: string, docId: string): Promise<void> => {
+    if (!validateUserId(userId)) throw new Error("Invalid user ID");
+    
+    const { error } = await supabase
+        .from('documents')
+        .delete()
+        .eq('id', docId)
+        .eq('user_id', userId);
+    
+    if (error) throw error;
 };

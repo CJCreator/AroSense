@@ -1,6 +1,7 @@
 import { FamilyMember } from '../types';
-import { supabase } from '../integrations/supabase/client';
+import { supabase } from '../src/integrations/supabase/client';
 import { DEFAULT_USER_PROFILE_IMAGE } from '../constants';
+import { sanitizeForLog, validateUserId, validateId } from '../utils/securityUtils';
 
 // Helper to create the initial 'Self' profile for a new user
 const createInitialSelfProfile = async (userId: string, userName: string): Promise<FamilyMember> => {
@@ -20,14 +21,14 @@ const createInitialSelfProfile = async (userId: string, userName: string): Promi
         .single();
 
     if (error) {
-        console.error("Error creating initial self profile:", error);
+        console.error("Error creating initial self profile:", sanitizeForLog(error));
         throw error;
     }
     return data as FamilyMember;
 };
 
 export const getFamilyMembers = async (userId: string, userNameIfNew: string): Promise<FamilyMember[]> => {
-    if (!userId) return [];
+    if (!validateUserId(userId)) return [];
 
     const { data, error } = await supabase
         .from('family_members')
@@ -35,7 +36,7 @@ export const getFamilyMembers = async (userId: string, userNameIfNew: string): P
         .eq('user_id', userId);
 
     if (error) {
-        console.error("Error fetching family members:", error);
+        console.error("Error fetching family members:", sanitizeForLog(error));
         throw error;
     }
 
@@ -49,7 +50,7 @@ export const getFamilyMembers = async (userId: string, userNameIfNew: string): P
 };
 
 export const addFamilyMember = async (userId: string, newMemberData: Omit<FamilyMember, 'id'|'user_id'>): Promise<FamilyMember> => {
-    if (!userId) throw new Error("User ID is required.");
+    if (!validateUserId(userId)) throw new Error("Invalid user ID.");
 
     const memberToInsert = { ...newMemberData, user_id: userId };
 
@@ -60,14 +61,14 @@ export const addFamilyMember = async (userId: string, newMemberData: Omit<Family
         .single();
 
     if (error) {
-        console.error("Error adding family member:", error);
+        console.error("Error adding family member:", sanitizeForLog(error));
         throw error;
     }
     return data as FamilyMember;
 };
 
 export const updateFamilyMember = async (userId: string, updatedMember: FamilyMember): Promise<FamilyMember> => {
-    if (!userId || !updatedMember.id) throw new Error("User ID and Member ID are required.");
+    if (!validateUserId(userId) || !validateId(updatedMember.id)) throw new Error("Invalid user ID or member ID.");
 
     const { id, ...memberToUpdate } = updatedMember;
 
@@ -80,14 +81,14 @@ export const updateFamilyMember = async (userId: string, updatedMember: FamilyMe
         .single();
 
     if (error) {
-        console.error("Error updating family member:", error);
+        console.error("Error updating family member:", sanitizeForLog(error));
         throw error;
     }
     return data as FamilyMember;
 };
 
 export const deleteFamilyMember = async (userId: string, memberId: string): Promise<void> => {
-    if (!userId || !memberId) throw new Error("User ID and Member ID are required.");
+    if (!validateUserId(userId) || !validateId(memberId)) throw new Error("Invalid user ID or member ID.");
 
     const { error } = await supabase
         .from('family_members')
@@ -96,7 +97,7 @@ export const deleteFamilyMember = async (userId: string, memberId: string): Prom
         .eq('user_id', userId);
 
     if (error) {
-        console.error("Error deleting family member:", error);
+        console.error("Error deleting family member:", sanitizeForLog(error));
         throw error;
     }
 };

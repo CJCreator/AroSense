@@ -1,155 +1,255 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { Link } from 'react-router-dom';
-import {
-    FamilyMember, FeedingLogEntry, DiaperLogEntry, BabySleepLogEntry, GrowthRecordEntry,
-    MilestoneEntry, VaccinationEntry,
-    FEED_TYPES, FeedType, DIAPER_TYPES, DiaperType, MILESTONE_CATEGORIES, MilestoneCategory,
-    MOCK_VACCINE_SCHEDULE,
-    BABY_AGE_THRESHOLD_YEARS, MOCK_MILESTONES_CHECKLIST, ActivityTypeForGamification
-} from '../types.ts';
-import BabyIcon from '../components/icons/BabyIcon.tsx';
-import PlusIcon from '../components/icons/PlusIcon.tsx';
-import EditIcon from '../components/icons/EditIcon.tsx';
-import TrashIcon from '../components/icons/TrashIcon.tsx';
-import BookOpenIcon from '../components/icons/BookOpenIcon.tsx';
-import BabyNutritionMainView from './BabyNutritionMainView.tsx';
-import HeartbeatIcon from '../components/icons/HeartbeatIcon.tsx';
-import StarIcon from '../components/icons/StarIcon.tsx';
-import * as babyCareService from '../services/babyCareService.ts';
-import AppModal from '../components/AppModal.tsx'; 
-import { incrementLogCount, checkAndAwardBadges, awardPoints } from '../utils/gamificationUtils.ts';
-import { useAuth } from '../contexts/AuthContext.tsx'; 
-import * as familyMemberService from '../services/familyMemberService.ts'; 
+import React, { useState, useEffect } from 'react';
+import { useAuth } from '../contexts/AuthContext';
+import * as babyCareService from '../services/babyCareService';
+import * as familyMemberService from '../services/familyMemberService';
+import { FamilyMember } from '../types';
+import { PlusIcon } from '../components/icons/PlusIcon';
+import { BabyIcon } from '../components/icons/BabyIcon';
 
-// ... ChildSelector, TabButton, and other components remain the same ...
-
-const DailyLogsView: React.FC<{ childId: string, userId: string }> = ({ childId, userId }) => {
-    // ... state setup remains the same ...
-
-    const handleFormSubmit = async () => { 
-        if (!userId || !childId) return;
-        
-        try {
-            if (activeSubTab === 'feeding') {
-                const currentFormData = formData as FeedingLogFormData;
-                // validation...
-                const finalLogData = { /* ... build log data ... */ };
-                if (editingLog) {
-                    const updated = await babyCareService.updateFeedingLog(userId, editingLog.id, finalLogData);
-                    setFeedingLogs(prev => prev.map(l => l.id === updated.id ? updated : l));
-                } else {
-                    const added = await babyCareService.addFeedingLog(userId, childId, finalLogData);
-                    setFeedingLogs(prev => [added, ...prev]);
-                }
-            } 
-            // ... else if for diaper, sleep ...
-            
-            setIsModalOpen(false);
-            setEditingLog(undefined);
-        } catch (error) {
-            console.error("Failed to save log:", error);
-            alert("Could not save log.");
-        }
-    };
-
-    const handleDeleteLog = async (logId: string) => {
-        if (!userId || !childId) return;
-        if(window.confirm("Are you sure you want to delete this log?")) {
-            try {
-                if (activeSubTab === 'feeding') {
-                    await babyCareService.deleteFeedingLog(userId, logId);
-                    setFeedingLogs(prev => prev.filter(l => l.id !== logId));
-                } 
-                // ... else if for diaper, sleep ...
-            } catch (error) {
-                console.error("Failed to delete log:", error);
-                alert("Could not delete log.");
-            }
-        }
-    };
-
-    // ... rest of the component remains the same ...
-    return (
-        <div>...UI for DailyLogsView...</div>
-    );
-};
-
-const MilestonesView: React.FC<{ childId: string, userId: string }> = ({ childId, userId }) => {
-    // ... state setup ...
-
-    useEffect(() => {
-        if (!userId || !childId) return;
-        setIsLoading(true);
-        babyCareService.getMilestones(userId, childId)
-            .then(async (data) => {
-                if (data.length === 0) {
-                    const initialChecklist = MOCK_MILESTONES_CHECKLIST.map(mock => ({
-                        ...mock, isAchieved: false,
-                    }));
-                    const newMilestones = await babyCareService.bulkAddMilestones(userId, childId, initialChecklist);
-                    setMilestones(newMilestones);
-                } else {
-                    setMilestones(data);
-                }
-            })
-            .catch(console.error)
-            .finally(() => setIsLoading(false));
-    }, [userId, childId]);
-
-    const handleSaveMilestone = async () => {
-        // ... form validation ...
-        try {
-            if (editingMilestone) {
-                const updated = await babyCareService.updateMilestone(userId, editingMilestone.id, formData);
-                setMilestones(prev => prev.map(m => m.id === updated.id ? updated : m));
-            } else {
-                const added = await babyCareService.addMilestone(userId, childId, formData as any);
-                setMilestones(prev => [added, ...prev]);
-            }
-            // ... gamification ...
-            setIsModalOpen(false);
-        } catch (error) {
-            console.error("Failed to save milestone:", error);
-            alert("Could not save milestone.");
-        }
-    };
-
-    const toggleAchieved = async (milestoneId: string) => {
-        // ... logic to find and update milestone ...
-        try {
-            const updated = await babyCareService.updateMilestone(userId, milestoneId, { isAchieved: nowAchieved, achievedDate });
-            setMilestones(prev => prev.map(m => m.id === updated.id ? updated : m));
-            // ... gamification ...
-        } catch (error) {
-            console.error("Failed to update milestone:", error);
-            alert("Could not update milestone.");
-        }
-    };
-
-    const handleDeleteMilestone = async (milestoneId: string) => {
-        // ... confirmation logic ...
-        try {
-            await babyCareService.deleteMilestone(userId, milestoneId);
-            setMilestones(prev => prev.filter(m => m.id !== milestoneId));
-        } catch (error) {
-            console.error("Failed to delete milestone:", error);
-            alert("Could not delete milestone.");
-        }
-    };
-
-    // ... rest of the component remains the same ...
-    return (
-        <div>...UI for MilestonesView...</div>
-    );
-};
-
-// ... Other views (Growth, Health, etc.) would be refactored similarly ...
+type BabyCareTab = 'daily' | 'growth' | 'milestones' | 'vaccines' | 'nutrition';
 
 const BabyCarePage: React.FC = () => {
-  // ... existing state and setup ...
-  // The component structure remains the same, but the sub-components now use the new services
+  const { currentUser } = useAuth();
+  const [activeTab, setActiveTab] = useState<BabyCareTab>('daily');
+  const [children, setChildren] = useState<FamilyMember[]>([]);
+  const [selectedChild, setSelectedChild] = useState<FamilyMember | null>(null);
+  const [feedingLogs, setFeedingLogs] = useState<any[]>([]);
+  const [diaperLogs, setDiaperLogs] = useState<any[]>([]);
+  const [sleepLogs, setSleepLogs] = useState<any[]>([]);
+  const [growthRecords, setGrowthRecords] = useState<any[]>([]);
+  const [milestones, setMilestones] = useState<any[]>([]);
+  const [vaccinations, setVaccinations] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  const calculateAge = (dateOfBirth: string) => {
+    const today = new Date();
+    const birthDate = new Date(dateOfBirth);
+    let age = today.getFullYear() - birthDate.getFullYear();
+    const monthDiff = today.getMonth() - birthDate.getMonth();
+    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+      age--;
+    }
+    return age;
+  };
+
+  useEffect(() => {
+    if (!currentUser) return;
+    
+    const loadChildren = async () => {
+      try {
+        const familyMembers = await familyMemberService.getFamilyMembers(currentUser.id, currentUser.user_metadata.name || 'User');
+        const childMembers = familyMembers.filter(member => {
+          const age = calculateAge(member.dateOfBirth);
+          return age <= 5; // Children 5 years and under
+        });
+        setChildren(childMembers);
+        if (childMembers.length > 0) {
+          setSelectedChild(childMembers[0]);
+        }
+      } catch (error) {
+        console.error('Failed to load children:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadChildren();
+  }, [currentUser]);
+
+  useEffect(() => {
+    if (!selectedChild || !currentUser) return;
+    
+    const loadBabyCareData = async () => {
+      try {
+        const [feeding, diaper, sleep, growth, milestonesData, vaccines] = await Promise.all([
+          babyCareService.getFeedingLogs(currentUser.id, selectedChild.id),
+          babyCareService.getDiaperLogs(currentUser.id, selectedChild.id),
+          babyCareService.getBabySleepLogs(currentUser.id, selectedChild.id),
+          babyCareService.getGrowthRecords(currentUser.id, selectedChild.id),
+          babyCareService.getMilestones(currentUser.id, selectedChild.id),
+          babyCareService.getVaccinations(currentUser.id, selectedChild.id)
+        ]);
+        
+        setFeedingLogs(feeding);
+        setDiaperLogs(diaper);
+        setSleepLogs(sleep);
+        setGrowthRecords(growth);
+        setMilestones(milestonesData);
+        setVaccinations(vaccines);
+      } catch (error) {
+        console.error('Failed to load baby care data:', error);
+      }
+    };
+
+    loadBabyCareData();
+  }, [selectedChild, currentUser]);
+
+  const TabButton: React.FC<{ tab: BabyCareTab; label: string }> = ({ tab, label }) => (
+    <button
+      onClick={() => setActiveTab(tab)}
+      className={`px-4 py-2 rounded-lg transition ${
+        activeTab === tab
+          ? 'bg-blue-500 text-white'
+          : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+      }`}
+    >
+      {label}
+    </button>
+  );
+
+  const DailyLogsTab = () => (
+    <div className="space-y-6">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="bg-green-50 p-4 rounded-lg">
+          <h4 className="font-semibold text-green-800 mb-2">Feeding</h4>
+          <p className="text-2xl font-bold text-green-600">{feedingLogs.length}</p>
+          <p className="text-sm text-green-600">logs today</p>
+        </div>
+        <div className="bg-yellow-50 p-4 rounded-lg">
+          <h4 className="font-semibold text-yellow-800 mb-2">Diapers</h4>
+          <p className="text-2xl font-bold text-yellow-600">{diaperLogs.length}</p>
+          <p className="text-sm text-yellow-600">changes today</p>
+        </div>
+        <div className="bg-purple-50 p-4 rounded-lg">
+          <h4 className="font-semibold text-purple-800 mb-2">Sleep</h4>
+          <p className="text-2xl font-bold text-purple-600">{sleepLogs.length}</p>
+          <p className="text-sm text-purple-600">sessions today</p>
+        </div>
+      </div>
+      
+      <div className="flex space-x-2">
+        <button className="bg-green-500 text-white px-4 py-2 rounded-lg flex items-center space-x-2">
+          <PlusIcon className="w-4 h-4" />
+          <span>Log Feeding</span>
+        </button>
+        <button className="bg-yellow-500 text-white px-4 py-2 rounded-lg flex items-center space-x-2">
+          <PlusIcon className="w-4 h-4" />
+          <span>Log Diaper</span>
+        </button>
+        <button className="bg-purple-500 text-white px-4 py-2 rounded-lg flex items-center space-x-2">
+          <PlusIcon className="w-4 h-4" />
+          <span>Log Sleep</span>
+        </button>
+      </div>
+    </div>
+  );
+
+  const GrowthTab = () => (
+    <div className="space-y-4">
+      <div className="flex justify-between items-center">
+        <h3 className="text-lg font-semibold">Growth Charts</h3>
+        <button className="bg-blue-500 text-white px-4 py-2 rounded-lg flex items-center space-x-2">
+          <PlusIcon className="w-4 h-4" />
+          <span>Record Growth</span>
+        </button>
+      </div>
+      {growthRecords.length === 0 ? (
+        <p className="text-gray-500 text-center py-8">No growth records yet</p>
+      ) : (
+        <div className="space-y-2">
+          {growthRecords.map((record) => (
+            <div key={record.id} className="bg-white p-4 rounded-lg shadow">
+              <div className="flex justify-between">
+                <div>
+                  <p className="font-medium">{record.date}</p>
+                  <p className="text-sm text-gray-500">
+                    Weight: {record.weight_kg}kg, Height: {record.height_cm}cm
+                  </p>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+
+  const renderTabContent = () => {
+    switch (activeTab) {
+      case 'daily': return <DailyLogsTab />;
+      case 'growth': return <GrowthTab />;
+      case 'milestones': return <div>Milestones tracking coming soon...</div>;
+      case 'vaccines': return <div>Vaccination schedule coming soon...</div>;
+      case 'nutrition': return <div>Nutrition guide coming soon...</div>;
+      default: return <DailyLogsTab />;
+    }
+  };
+
+  if (!currentUser) {
+    return (
+      <div className="text-center py-12">
+        <p className="text-gray-500">Please log in to access baby care.</p>
+      </div>
+    );
+  }
+
+  if (isLoading) {
+    return (
+      <div className="text-center py-12">
+        <p className="text-gray-500">Loading baby care data...</p>
+      </div>
+    );
+  }
+
+  if (children.length === 0) {
+    return (
+      <div className="text-center py-12">
+        <BabyIcon className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+        <h3 className="text-xl font-semibold text-gray-600 mb-2">No Children Found</h3>
+        <p className="text-gray-500 mb-4">Add children (5 years or younger) to your family to use baby care features.</p>
+        <button className="bg-primary text-white px-6 py-3 rounded-lg">
+          Add Child to Family
+        </button>
+      </div>
+    );
+  }
+
   return (
-    <div>...UI for BabyCarePage...</div>
+    <div className="space-y-6">
+      <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
+        <div className="flex items-center space-x-3">
+          <BabyIcon className="w-8 h-8 text-blue-500" />
+          <h2 className="text-3xl font-bold text-textPrimary">Baby Care Module</h2>
+        </div>
+      </div>
+
+      {children.length > 1 && (
+        <div className="bg-blue-50 p-4 rounded-lg">
+          <label className="block text-sm font-medium text-blue-800 mb-2">Select Child:</label>
+          <select 
+            value={selectedChild?.id || ''} 
+            onChange={(e) => setSelectedChild(children.find(c => c.id === e.target.value) || null)}
+            className="w-full p-2 border border-blue-200 rounded-md bg-white"
+          >
+            {children.map(child => (
+              <option key={child.id} value={child.id}>
+                {child.name} ({calculateAge(child.dateOfBirth)} years old)
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
+
+      <div className="flex flex-wrap gap-2 border-b">
+        <TabButton tab="daily" label="Daily Logs" />
+        <TabButton tab="growth" label="Growth Charts" />
+        <TabButton tab="milestones" label="Milestones" />
+        <TabButton tab="vaccines" label="Vaccinations" />
+        <TabButton tab="nutrition" label="Nutrition" />
+      </div>
+
+      <div className="bg-surface rounded-xl shadow-lg p-6">
+        {selectedChild && (
+          <div className="mb-4 p-3 bg-blue-50 rounded-lg">
+            <p className="text-sm text-blue-800">
+              Tracking for <span className="font-semibold">{selectedChild.name}</span> 
+              ({calculateAge(selectedChild.dateOfBirth)} years old)
+            </p>
+          </div>
+        )}
+        {renderTabContent()}
+      </div>
+    </div>
   );
 };
 

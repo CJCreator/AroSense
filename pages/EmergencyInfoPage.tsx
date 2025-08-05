@@ -8,6 +8,9 @@ import TrashIcon from '../components/icons/TrashIcon.tsx';
 import { DEFAULT_FAMILY_MEMBER_IMAGE } from '../constants.tsx';
 import { useAuth } from '../contexts/AuthContext.tsx';
 import * as familyMemberService from '../services/familyMemberService.ts';
+import * as emergencyService from '../services/emergencyService';
+import { sanitizeForLog } from '../utils/securityUtils';
+import QRCodeGenerator from '../components/QRCodeGenerator';
 
 interface InfoRowProps {
     label: string;
@@ -103,26 +106,14 @@ const EmergencyInfoPage: React.FC = () => {
                 }
             })
             .catch((err: any) => {
-                console.error("Failed to load emergency info:", err);
+                console.error("Failed to load emergency info:", sanitizeForLog(err));
                 setError("Failed to load your information.");
             })
             .finally(() => setIsLoading(false));
     }
   }, [currentUser]);
 
-  const qrDataContent = userData ? `
-    BEGIN:VCARD
-    VERSION:3.0
-    N:${userData.name.split(' ').pop()};${userData.name.split(' ')[0]}
-    FN:${userData.name}
-    DOB:${userData.dateOfBirth}
-    GENDER:${userData.gender}
-    BLOODTYPE:${userData.bloodType || 'N/A'}
-    TEL;TYPE=CELL:${userData.emergencyContacts?.[0]?.phone || 'N/A'}
-    NOTE:Allergies: ${userData.allergies?.join(', ') || 'N/A'}. Conditions: ${userData.medicalConditions?.join(', ') || 'N/A'}. Meds: ${userData.medications?.join(', ') || 'N/A'}. Notes: ${userData.emergencyNotes || ''}
-    END:VCARD
-  `.trim().replace(/\n\s*/g, '%0A') : '';
-  const mockQrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(qrDataContent)}`;
+  const qrDataContent = userData ? emergencyService.generateQRCode(userData) : '';
 
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
@@ -250,14 +241,21 @@ const EmergencyInfoPage: React.FC = () => {
         {showQrCode && (
           <div className="mb-6 p-4 bg-slate-50 rounded-lg text-center">
             <h3 className="text-lg font-semibold text-textPrimary mb-2">Emergency QR Code</h3>
-            <p className="text-sm text-textSecondary mb-4">Scan for VCard. Consider printing this screen or generating a wallet card.</p>
-            <img src={mockQrCodeUrl} alt="Emergency QR Code" className="mx-auto w-48 h-48 border border-slate-300 p-1 bg-white" />
-            <button 
-              onClick={() => { navigator.clipboard.writeText(qrDataContent).then(() => alert('VCard data copied to clipboard!')).catch(err => alert('Failed to copy QR data.')); }}
-              className="mt-4 bg-accent text-white px-3 py-1.5 rounded-md text-sm hover:bg-pink-500"
-            >
-              Copy VCard Data
-            </button>
+            <QRCodeGenerator data={qrDataContent} size={200} className="mb-4" />
+            <div className="flex justify-center space-x-2">
+              <button 
+                onClick={() => window.print()}
+                className="bg-blue-500 text-white px-3 py-1.5 rounded-md text-sm hover:bg-blue-600"
+              >
+                Print Page
+              </button>
+              <button 
+                onClick={() => { navigator.clipboard.writeText(qrDataContent).then(() => alert('Emergency data copied to clipboard!')).catch(() => alert('Failed to copy data.')); }}
+                className="bg-accent text-white px-3 py-1.5 rounded-md text-sm hover:bg-pink-500"
+              >
+                Copy Data
+              </button>
+            </div>
           </div>
         )}
 

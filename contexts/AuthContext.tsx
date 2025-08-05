@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useEffect, ReactNode } from
 import { AuthContextType, AppUser } from '../types';
 import { supabase } from '@/src/integrations/supabase/client'; // Corrected import path
 import type { Session } from '@supabase/supabase-js';
+import { sanitizeForLog } from '../utils/securityUtils';
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
@@ -65,7 +66,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const logout = async () => {
     const { error } = await supabase.auth.signOut();
     if (error) {
-      console.error("Error logging out:", error.message);
+      console.error("Error logging out:", sanitizeForLog(error.message));
     }
     // The onAuthStateChange listener will handle state updates automatically
   };

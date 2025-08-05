@@ -8,6 +8,7 @@ import { getUserPoints, getEarnedBadges, getActivityStreak } from '../utils/gami
 import StarIcon from './icons/StarIcon.tsx'; 
 import { useAuth } from '../contexts/AuthContext.tsx'; // Import useAuth
 import * as familyMemberService from '../services/familyMemberService.ts';
+import { sanitizeForLog } from '../utils/securityUtils';
 
 
 const Card: React.FC<{ title: string; children: React.ReactNode; className?: string; titleAction?: React.ReactNode; icon?: React.ReactNode }> = ({ title, children, className, titleAction, icon }) => (
@@ -53,7 +54,7 @@ const Dashboard: React.FC = () => {
         setFamilyMembers(data);
       })
       .catch(err => {
-        console.error("Failed to load family members for dashboard", err);
+        console.error("Failed to load family members for dashboard", sanitizeForLog(err));
       })
       .finally(() => {
         setIsLoadingMembers(false);
