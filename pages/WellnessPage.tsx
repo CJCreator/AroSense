@@ -2,8 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import * as wellnessService from '../services/wellnessService';
 import { VitalLog, WeightLogEntry, ActivityLog, SleepLog, HydrationLog, MoodLog } from '../types';
-import { PlusIcon } from '../components/icons/PlusIcon';
-import { HeartbeatIcon } from '../components/icons/HeartbeatIcon';
+import PlusIcon from '../components/icons/PlusIcon';
+import HeartbeatIcon from '../components/icons/HeartbeatIcon';
 import { sanitizeForLog } from '../utils/securityUtils';
 
 type WellnessTab = 'vitals' | 'weight' | 'activity' | 'sleep' | 'hydration' | 'mood';

@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import * as pregnancyService from '../services/pregnancyServicePhase2';
-import { PlusIcon } from '../components/icons/PlusIcon';
-import { PregnantWomanIcon } from '../components/icons/PregnantWomanIcon';
-import { AppModal } from '../components/AppModal';
-import { DateTimeInputGroup } from '../components/DateTimeInputGroup';
+import PlusIcon from '../components/icons/PlusIcon';
+import PregnantWomanIcon from '../components/icons/PregnantWomanIcon';
+import AppModal from '../components/AppModal';
+import DateTimeInputGroup from '../components/DateTimeInputGroup';
 import PregnancyTimeline from '../components/PregnancyTimeline';
 import PregnancyDashboard from '../components/PregnancyDashboard';
 import type { PregnancyProfile, PregnancySymptoms, KickCount, PrenatalAppointment } from '../types/phase2Types';

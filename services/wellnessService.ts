@@ -8,12 +8,6 @@ import { validateUserId, sanitizeForLog } from '../utils/securityUtils';
 // Import Phase 1 services
 import { getVitalsLogs, addVitalsLog, getWeightLogs as getPhase1WeightLogs, addWeightLog as addPhase1WeightLog, getActivityLogs as getPhase1ActivityLogs, addActivityLog as addPhase1ActivityLog, getWellnessLogs, addWellnessLog } from './vitalsService';
 
-// Import Phase 1 services
-import { getVitalsLogs, addVitalsLog, getWeightLogs as getPhase1WeightLogs, addWeightLog as addPhase1WeightLog, getActivityLogs as getPhase1ActivityLogs, addActivityLog as addPhase1ActivityLog, getWellnessLogs, addWellnessLog } from './vitalsService';
-
-// Import Phase 1 services
-import { getVitalsLogs, addVitalsLog, getWeightLogs as getPhase1WeightLogs, addWeightLog as addPhase1WeightLog, getActivityLogs as getPhase1ActivityLogs, addActivityLog as addPhase1ActivityLog, getWellnessLogs, addWellnessLog } from './vitalsService';
-
 // --- Vitals Service - Use Phase 1 with legacy compatibility ---
 export const getVitals = async (userId: string): Promise<VitalLog[]> => {
     try {
@@ -371,109 +365,7 @@ export const getWellnessSummary = async (userId: string): Promise<WellnessSummar
             getMoodLogs(validatedUserId)
         ]);
         
-        // Helper functions for mapping between legacy and Phase 1 formats
-        function mapLegacyVitalToPhase1(vital: Omit<VitalLog, 'id' | 'user_id'>): any {
-            const baseData = {
-                family_member_id: vital.familyMemberId,
-                measured_at: `${vital.date}T${vital.time || '00:00'}:00Z`,
-                notes: vital.notes
-            };
-            
-            switch (vital.type) {
-                case 'BloodPressure':
-                    return {
-                        ...baseData,
-                        vital_type: 'blood_pressure',
-                        systolic: vital.systolic,
-                        diastolic: vital.diastolic,
-                        value_numeric: vital.pulse
-                    };
-                case 'HeartRate':
-                    return {
-                        ...baseData,
-                        vital_type: 'heart_rate',
-                        value_numeric: vital.value
-                    };
-                case 'BloodGlucose':
-                    return {
-                        ...baseData,
-                        vital_type: 'blood_glucose',
-                        value_numeric: vital.level,
-                        unit: vital.unit,
-                        value_text: vital.readingContext
-                    };
-                case 'Temperature':
-                    return {
-                        ...baseData,
-                        vital_type: 'temperature',
-                        value_numeric: vital.value,
-                        unit: vital.unit
-                    };
-                case 'OxygenSaturation':
-                    return {
-                        ...baseData,
-                        vital_type: 'oxygen_saturation',
-                        value_numeric: vital.value
-                    };
-                default:
-                    return baseData;
-            }
-        }
-        
-        function mapPhase1VitalToLegacy(phase1: any): VitalLog {
-            const baseData = {
-                id: phase1.id,
-                user_id: phase1.user_id,
-                date: phase1.measured_at.split('T')[0],
-                time: phase1.measured_at.split('T')[1]?.substring(0, 5) || '00:00',
-                notes: phase1.notes,
-                familyMemberId: phase1.family_member_id
-            };
-            
-            switch (phase1.vital_type) {
-                case 'blood_pressure':
-                    return {
-                        ...baseData,
-                        type: 'BloodPressure',
-                        systolic: phase1.systolic,
-                        diastolic: phase1.diastolic,
-                        pulse: phase1.value_numeric
-                    };
-                case 'heart_rate':
-                    return {
-                        ...baseData,
-                        type: 'HeartRate',
-                        value: phase1.value_numeric
-                    };
-                case 'blood_glucose':
-                    return {
-                        ...baseData,
-                        type: 'BloodGlucose',
-                        level: phase1.value_numeric,
-                        unit: phase1.unit || 'mg/dL',
-                        readingContext: phase1.value_text || 'Random'
-                    };
-                case 'temperature':
-                    return {
-                        ...baseData,
-                        type: 'Temperature',
-                        value: phase1.value_numeric,
-                        unit: phase1.unit || 'Celsius'
-                    };
-                case 'oxygen_saturation':
-                    return {
-                        ...baseData,
-                        type: 'OxygenSaturation',
-                        value: phase1.value_numeric
-                    };
-                default:
-                    return {
-                        ...baseData,
-                        type: 'HeartRate',
-                        value: 0
-                    };
-            }
-        }
+
         
         const today = new Date().toISOString().split('T')[0];
         
@@ -521,66 +413,25 @@ function mapLegacyVitalToPhase1(vital: Omit<VitalLog, 'id' | 'user_id'>): any {
                 vital_type: 'heart_rate',
                 value_numeric: vital.value
             };
-        default:
-            return baseData;
-    }
-}
-
-function mapPhase1VitalToLegacy(phase1: any): VitalLog {
-    const baseData = {
-        id: phase1.id,
-        user_id: phase1.user_id,
-        date: phase1.measured_at.split('T')[0],
-        time: phase1.measured_at.split('T')[1]?.substring(0, 5) || '00:00',
-        notes: phase1.notes,
-        familyMemberId: phase1.family_member_id
-    };
-    
-    switch (phase1.vital_type) {
-        case 'blood_pressure':
+        case 'BloodGlucose':
             return {
                 ...baseData,
-                type: 'BloodPressure',
-                systolic: phase1.systolic,
-                diastolic: phase1.diastolic,
-                pulse: phase1.value_numeric
+                vital_type: 'blood_glucose',
+                value_numeric: vital.level,
+                unit: vital.unit,
+                value_text: vital.readingContext
             };
-        case 'heart_rate':
+        case 'Temperature':
             return {
                 ...baseData,
-                type: 'HeartRate',
-                value: phase1.value_numeric
+                vital_type: 'temperature',
+                value_numeric: vital.value,
+                unit: vital.unit
             };
-        default:
+        case 'OxygenSaturation':
             return {
                 ...baseData,
-                type: 'HeartRate',
-                value: 0
-            };
-    }
-}
-
-// Helper functions for mapping between legacy and Phase 1 formats
-function mapLegacyVitalToPhase1(vital: Omit<VitalLog, 'id' | 'user_id'>): any {
-    const baseData = {
-        family_member_id: vital.familyMemberId,
-        measured_at: `${vital.date}T${vital.time || '00:00'}:00Z`,
-        notes: vital.notes
-    };
-    
-    switch (vital.type) {
-        case 'BloodPressure':
-            return {
-                ...baseData,
-                vital_type: 'blood_pressure',
-                systolic: vital.systolic,
-                diastolic: vital.diastolic,
-                value_numeric: vital.pulse
-            };
-        case 'HeartRate':
-            return {
-                ...baseData,
-                vital_type: 'heart_rate',
+                vital_type: 'oxygen_saturation',
                 value_numeric: vital.value
             };
         default:
@@ -611,6 +462,27 @@ function mapPhase1VitalToLegacy(phase1: any): VitalLog {
             return {
                 ...baseData,
                 type: 'HeartRate',
+                value: phase1.value_numeric
+            };
+        case 'blood_glucose':
+            return {
+                ...baseData,
+                type: 'BloodGlucose',
+                level: phase1.value_numeric,
+                unit: phase1.unit || 'mg/dL',
+                readingContext: phase1.value_text || 'Random'
+            };
+        case 'temperature':
+            return {
+                ...baseData,
+                type: 'Temperature',
+                value: phase1.value_numeric,
+                unit: phase1.unit || 'Celsius'
+            };
+        case 'oxygen_saturation':
+            return {
+                ...baseData,
+                type: 'OxygenSaturation',
                 value: phase1.value_numeric
             };
         default:

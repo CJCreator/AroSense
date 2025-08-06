@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { PlusIcon } from './icons/PlusIcon';
-import { AppModal } from './AppModal';
-import { DateTimeInputGroup } from './DateTimeInputGroup';
+import AppModal from './AppModal';
+import DateTimeInputGroup from './DateTimeInputGroup';
 import * as womensHealthService from '../services/womensHealthServicePhase2';
 import * as pregnancyService from '../services/pregnancyServicePhase2';
 

@@ -8,13 +8,12 @@ import { getFamilyMembers as getPhase1FamilyMembers, addFamilyMember as addPhase
 
 // Helper to create the initial 'Self' profile for a new user
 const createInitialSelfProfile = async (userId: string, userName: string): Promise<FamilyMember> => {
-    const selfProfile: Omit<FamilyMember, 'id'> = {
+    const selfProfile = {
         user_id: userId,
         name: userName,
-        dateOfBirth: '1990-01-01', // Placeholder
-        gender: 'Prefer Not to Say' as any,
-        relationshipToUser: 'Self',
-        profileImageUrl: DEFAULT_USER_PROFILE_IMAGE,
+        date_of_birth: '1990-01-01', // Placeholder
+        relationship: 'other',
+        is_active: true
     };
 
     const { data, error } = await supabase

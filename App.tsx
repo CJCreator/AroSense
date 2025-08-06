@@ -24,6 +24,7 @@ import CommunityForumPage from './pages/CommunityForumPage.tsx';
 import WellnessRewardsPage from './pages/WellnessRewardsPage.tsx';
 import LoginPage from './pages/LoginPage.tsx';
 import RegisterPage from './pages/RegisterPage.tsx';
+import TestPage from './pages/TestPage.tsx';
 
 const LoadingIndicator: React.FC = () => (
   <div className="flex justify-center items-center h-screen bg-background">
@@ -73,6 +74,7 @@ const AppContent: React.FC = () => {
           <Route path="/community" element={<ProtectedRoute><CommunityForumPage /></ProtectedRoute>} />
           <Route path="/wellness-rewards" element={<ProtectedRoute><WellnessRewardsPage /></ProtectedRoute>} />
           <Route path="/settings" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />
+          <Route path="/test" element={<ProtectedRoute><TestPage /></ProtectedRoute>} />
         </Route>
         
         {/* Fallback route */}
