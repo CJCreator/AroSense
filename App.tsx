@@ -6,7 +6,8 @@ import ProtectedRoute from './components/ProtectedRoute.tsx';
 import { AuthProvider, useAuth } from './contexts/AuthContext.tsx';
 import { awardPointsForDailyLaunch } from './utils/gamificationUtils.ts';
 import { ToastProvider } from './components/ui/Toast';
-import { AccessibilityProvider, SkipToMain } from './components/ui/AccessibilityProvider'; 
+import { AccessibilityProvider, SkipToMain } from './components/ui/AccessibilityProvider';
+import { ErrorBoundary } from './components/ui/ErrorBoundary'; 
 
 // Static imports to resolve module loading issues
 import Dashboard from './components/Dashboard.tsx';
@@ -27,6 +28,7 @@ import WellnessRewardsPage from './pages/WellnessRewardsPage.tsx';
 import LoginPage from './pages/LoginPage.tsx';
 import RegisterPage from './pages/RegisterPage.tsx';
 import TestPage from './pages/TestPage.tsx';
+import AnalyticsPage from './pages/AnalyticsPage.tsx';
 
 const LoadingIndicator: React.FC = () => (
   <div className="flex justify-center items-center h-screen bg-background">
@@ -76,6 +78,7 @@ const AppContent: React.FC = () => {
           <Route path="/community" element={<ProtectedRoute><CommunityForumPage /></ProtectedRoute>} />
           <Route path="/wellness-rewards" element={<ProtectedRoute><WellnessRewardsPage /></ProtectedRoute>} />
           <Route path="/settings" element={<ProtectedRoute><SettingsPageModern /></ProtectedRoute>} />
+          <Route path="/analytics" element={<ProtectedRoute><AnalyticsPage /></ProtectedRoute>} />
           <Route path="/test" element={<ProtectedRoute><TestPage /></ProtectedRoute>} />
         </Route>
         
@@ -89,14 +92,16 @@ const AppContent: React.FC = () => {
 
 const App: React.FC = () => {
   return (
-    <AccessibilityProvider>
-      <ToastProvider>
-        <AuthProvider>
-          <SkipToMain />
-          <AppContent />
-        </AuthProvider>
-      </ToastProvider>
-    </AccessibilityProvider>
+    <ErrorBoundary>
+      <AccessibilityProvider>
+        <ToastProvider>
+          <AuthProvider>
+            <SkipToMain />
+            <AppContent />
+          </AuthProvider>
+        </ToastProvider>
+      </AccessibilityProvider>
+    </ErrorBoundary>
   );
 };
 

@@ -12,6 +12,8 @@ import { Input, Textarea } from '../components/ui/Input';
 import { EmptyStateCard } from '../components/ui/EmptyState';
 import { LoadingState } from '../components/ui/LoadingSpinner';
 import AppModal from '../components/AppModal';
+import { FilterPanel } from '../components/ui/FilterPanel';
+import { useSearch } from '../hooks/useSearch';
 
 const FamilyProfilesPage: React.FC = () => {
   const { currentUser } = useAuth();
@@ -29,6 +31,14 @@ const FamilyProfilesPage: React.FC = () => {
     allergies: [] as string[],
     emergencyNotes: ''
   });
+  const [searchQuery, setSearchQuery] = useState('');
+  const [filters, setFilters] = useState<Record<string, any>>({});
+
+  const { results: filteredMembers } = useSearch(
+    familyMembers,
+    searchQuery,
+    { keys: ['name', 'relationship', 'blood_type'] }
+  );
 
   const loadFamilyMembers = useCallback(async () => {
     if (currentUser) {
@@ -169,6 +179,43 @@ const FamilyProfilesPage: React.FC = () => {
           </div>
         </div>
 
+        {/* Search and Filters */}
+        {familyMembers.length > 0 && (
+          <div className="mb-6 space-y-4">
+            <div className="flex flex-col sm:flex-row gap-4">
+              <div className="flex-1">
+                <input
+                  type="text"
+                  placeholder="Search family members..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-inclusive-orange-500 focus:border-transparent"
+                />
+              </div>
+            </div>
+            
+            <FilterPanel
+              filters={[
+                {
+                  id: 'relationship',
+                  label: 'Relationship',
+                  type: 'select',
+                  options: RELATIONSHIP_OPTIONS.map(r => ({ id: r, label: r, value: r }))
+                },
+                {
+                  id: 'bloodType',
+                  label: 'Blood Type',
+                  type: 'select',
+                  options: BLOOD_TYPE_OPTIONS.map(b => ({ id: b, label: b, value: b }))
+                }
+              ]}
+              values={filters}
+              onChange={(filterId, value) => setFilters(prev => ({ ...prev, [filterId]: value }))}
+              onReset={() => setFilters({})}
+            />
+          </div>
+        )}
+
         {/* Content */}
         {familyMembers.length === 0 ? (
           <EmptyStateCard
@@ -184,7 +231,7 @@ const FamilyProfilesPage: React.FC = () => {
           />
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {familyMembers.map(member => (
+            {filteredMembers.map(member => (
               <Card key={member.id} variant="elevated" className="hover:shadow-lg transition-all duration-200 hover:-translate-y-1">
                 <CardContent>
                   {/* Member Header */}

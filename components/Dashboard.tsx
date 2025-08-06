@@ -14,6 +14,11 @@ import { Card, CardHeader, CardContent } from './ui/Card';
 import Button from './ui/Button';
 import DashboardWidget from './ui/DashboardWidget';
 import { EmptyStateCard } from './ui/EmptyState';
+import { DashboardSkeleton } from './ui/Skeleton';
+import { HealthMetricsWidget } from './ui/HealthMetricsWidget';
+import { OnboardingFlow } from './OnboardingFlow';
+import { useInteractionFeedback } from '../hooks/useInteractionFeedback';
+import { useOfflineSync } from '../hooks/useOfflineSync';
 
 
 
@@ -23,6 +28,10 @@ const Dashboard: React.FC = () => {
   const [quickAccessItems, setQuickAccessItems] = useState<NavItem[]>([]);
   const [familyMembers, setFamilyMembers] = useState<FamilyMember[]>([]);
   const [isLoadingMembers, setIsLoadingMembers] = useState(true);
+  const [showOnboarding, setShowOnboarding] = useState(false);
+  
+  const { showSuccess } = useInteractionFeedback();
+  const { isOnline, pendingActions } = useOfflineSync();
 
   const { currentUser } = useAuth(); // Get current user
 
@@ -35,6 +44,12 @@ const Dashboard: React.FC = () => {
     const defaultQuickAccess = NAVIGATION_ITEMS.filter(item => item.isFeature && (item.path !== '/dashboard') && !item.isNew && item.name !== 'Wellness Rewards').slice(0, 4);
     const newFeaturesQuickAccess = NAVIGATION_ITEMS.filter(item => item.isNew && item.name !== 'Wellness Rewards').slice(0,2);
     setQuickAccessItems([...defaultQuickAccess, ...newFeaturesQuickAccess].slice(0,6));
+    
+    // Check if user needs onboarding
+    const hasCompletedOnboarding = localStorage.getItem('arosense_onboarding_complete');
+    if (!hasCompletedOnboarding) {
+      setShowOnboarding(true);
+    }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -81,6 +96,14 @@ const Dashboard: React.FC = () => {
 
 
   return (
+    <>
+      {showOnboarding && (
+        <OnboardingFlow onComplete={() => {
+          setShowOnboarding(false);
+          showSuccess('Welcome to AroSense! Your health journey begins now.');
+        }} />
+      )}
+      
     <div className="min-h-screen bg-gradient-to-br from-energetic-green-50 to-blue-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Welcome Header */}
@@ -90,7 +113,20 @@ const Dashboard: React.FC = () => {
               <h1 className="text-4xl font-bold text-gray-800 mb-2">
                 Welcome back{currentUser ? `, ${currentUser.user_metadata.name || 'User'}` : ''}!
               </h1>
-              <p className="text-gray-600">Here's your health overview for today</p>
+              <div className="flex items-center space-x-4">
+                <p className="text-gray-600">Here's your health overview for today</p>
+                {!isOnline && (
+                  <div className="flex items-center space-x-2 px-3 py-1 bg-yellow-100 text-yellow-800 rounded-full text-sm">
+                    <div className="w-2 h-2 bg-yellow-500 rounded-full animate-pulse" />
+                    <span>Offline Mode</span>
+                  </div>
+                )}
+                {pendingActions > 0 && (
+                  <div className="flex items-center space-x-2 px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm">
+                    <span>{pendingActions} pending sync</span>
+                  </div>
+                )}
+              </div>
             </div>
             <Button
               variant="primary"
@@ -178,6 +214,48 @@ const Dashboard: React.FC = () => {
           </div>
         </div>
 
+        {/* Health Metrics */}
+        <div className="mb-8">
+          <HealthMetricsWidget
+            metrics={[
+              {
+                id: 'weight',
+                name: 'Weight',
+                value: 174,
+                unit: ' lbs',
+                trend: 'down',
+                change: -6,
+                color: '#3B82F6',
+                data: [
+                  { date: '2024-01-01', value: 180 },
+                  { date: '2024-01-15', value: 178 },
+                  { date: '2024-02-01', value: 176 },
+                  { date: '2024-02-15', value: 175 },
+                  { date: '2024-03-01', value: 174 }
+                ],
+                target: 170
+              },
+              {
+                id: 'bp',
+                name: 'Blood Pressure',
+                value: 120,
+                unit: ' mmHg',
+                trend: 'down',
+                change: -10,
+                color: '#EF4444',
+                data: [
+                  { date: '2024-01-01', value: 130 },
+                  { date: '2024-01-15', value: 125 },
+                  { date: '2024-02-01', value: 128 },
+                  { date: '2024-02-15', value: 122 },
+                  { date: '2024-03-01', value: 120 }
+                ],
+                target: 120
+              }
+            ]}
+          />
+        </div>
+
         {/* Bottom Section */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Family Members */}
@@ -196,10 +274,7 @@ const Dashboard: React.FC = () => {
               
               <CardContent>
                 {isLoadingMembers ? (
-                  <div className="text-center py-8">
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-500 mx-auto mb-4"></div>
-                    <p className="text-gray-500">Loading members...</p>
-                  </div>
+                  <DashboardSkeleton />
                 ) : familyMembers.length === 0 ? (
                   <EmptyStateCard
                     icon="👥"
@@ -271,6 +346,7 @@ const Dashboard: React.FC = () => {
         </div>
       </div>
     </div>
+    </>
   );
 };
 

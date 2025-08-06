@@ -5,6 +5,12 @@ import Button from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { LoadingState } from '../components/ui/LoadingSpinner';
 import SettingsIcon from '../components/icons/SettingsIcon';
+import { ThemeCustomizer } from '../components/ThemeCustomizer';
+import { NotificationCenter } from '../components/NotificationCenter';
+import { useHealthReminders } from '../hooks/useHealthReminders';
+import { ThemeCustomizer } from '../components/ThemeCustomizer';
+import { NotificationCenter } from '../components/NotificationCenter';
+import { useHealthReminders } from '../hooks/useHealthReminders';
 
 interface UserSettings {
   notifications: {
@@ -35,6 +41,10 @@ const SettingsPageModern: React.FC = () => {
     name: currentUser?.user_metadata?.name || '',
     email: currentUser?.email || ''
   });
+  const [showNotificationCenter, setShowNotificationCenter] = useState(false);
+  const { reminders, notificationPermission, requestNotificationPermission } = useHealthReminders();
+  const [showNotificationCenter, setShowNotificationCenter] = useState(false);
+  const { reminders, notificationPermission, requestNotificationPermission } = useHealthReminders();
 
   const handleSaveSettings = async () => {
     setIsLoading(true);
@@ -194,27 +204,60 @@ const SettingsPageModern: React.FC = () => {
             </CardContent>
           </Card>
 
+          {/* Theme Customization */}
+          <ThemeCustomizer />
+
+          {/* Health Reminders */}
+          <Card variant="elevated">
+            <CardHeader title="Health Reminders" subtitle="Manage your health notifications and reminders" />
+            <CardContent>
+              <div className="space-y-4">
+                <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                  <div>
+                    <h4 className="font-semibold text-gray-800">Browser Notifications</h4>
+                    <p className="text-sm text-gray-600">Allow notifications for health reminders</p>
+                  </div>
+                  <div className="flex items-center space-x-3">
+                    <span className={`text-sm ${
+                      notificationPermission === 'granted' ? 'text-green-600' : 
+                      notificationPermission === 'denied' ? 'text-red-600' : 'text-yellow-600'
+                    }`}>
+                      {notificationPermission === 'granted' ? 'Enabled' : 
+                       notificationPermission === 'denied' ? 'Blocked' : 'Not Set'}
+                    </span>
+                    {notificationPermission !== 'granted' && (
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        onClick={requestNotificationPermission}
+                      >
+                        Enable
+                      </Button>
+                    )}
+                  </div>
+                </div>
+                
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h4 className="font-semibold text-gray-800">Active Reminders</h4>
+                    <p className="text-sm text-gray-600">{reminders.filter(r => r.enabled).length} reminders active</p>
+                  </div>
+                  <Button
+                    variant="secondary"
+                    onClick={() => setShowNotificationCenter(true)}
+                  >
+                    Manage Reminders
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
           {/* App Preferences */}
           <Card variant="elevated">
             <CardHeader title="App Preferences" subtitle="Customize your app experience" />
             <CardContent>
               <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">Theme</label>
-                  <select
-                    value={settings.preferences.theme}
-                    onChange={(e) => setSettings(prev => ({
-                      ...prev,
-                      preferences: { ...prev.preferences, theme: e.target.value as any }
-                    }))}
-                    className="w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                  >
-                    <option value="light">Light</option>
-                    <option value="dark">Dark</option>
-                    <option value="system">System</option>
-                  </select>
-                </div>
-                
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-2">Language</label>
                   <select
@@ -233,6 +276,9 @@ const SettingsPageModern: React.FC = () => {
               </div>
             </CardContent>
           </Card>
+
+          {/* Theme Customization */}
+          <ThemeCustomizer />
 
           {/* Data Management */}
           <Card variant="elevated">
@@ -278,6 +324,12 @@ const SettingsPageModern: React.FC = () => {
             </Button>
           </div>
         </div>
+        
+        {/* Notification Center Modal */}
+        <NotificationCenter
+          isOpen={showNotificationCenter}
+          onClose={() => setShowNotificationCenter(false)}
+        />
       </div>
     </div>
   );

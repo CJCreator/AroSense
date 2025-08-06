@@ -163,7 +163,7 @@ const DataExport: React.FC<DataExportProps> = ({
           </div>
         </div>
       </div>
-    </div>
+    </Card>
   );
 };
 
