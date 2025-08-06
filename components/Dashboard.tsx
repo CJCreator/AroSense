@@ -3,26 +3,20 @@ import { Link } from 'react-router-dom';
 import { NavItem, FamilyMember, UserPoints, EarnedBadge, ActivityStreak, BadgeDefinition, ActivityTypeForGamification } from '../types.ts';
 import { NAVIGATION_ITEMS, DEFAULT_FAMILY_MEMBER_IMAGE, INITIAL_BADGES } from '../constants.tsx'; 
 import PlusIcon from './icons/PlusIcon.tsx';
-import EditIcon from './icons/EditIcon.tsx';
+import StarIcon from './icons/StarIcon.tsx';
+import HeartbeatIcon from './icons/HeartbeatIcon.tsx';
+import UsersIcon from './icons/UsersIcon.tsx';
 import { getUserPoints, getEarnedBadges, getActivityStreak } from '../utils/gamificationUtils.ts';
-import StarIcon from './icons/StarIcon.tsx'; 
-import { useAuth } from '../contexts/AuthContext.tsx'; // Import useAuth
+import { useAuth } from '../contexts/AuthContext.tsx';
 import * as familyMemberService from '../services/familyMemberService.ts';
 import { sanitizeForLog } from '../utils/securityUtils';
+import { Card, CardHeader, CardContent } from './ui/Card';
+import Button from './ui/Button';
+import DashboardWidget from './ui/DashboardWidget';
+import { EmptyStateCard } from './ui/EmptyState';
 
 
-const Card: React.FC<{ title: string; children: React.ReactNode; className?: string; titleAction?: React.ReactNode; icon?: React.ReactNode }> = ({ title, children, className, titleAction, icon }) => (
-    <div className={`bg-surface p-4 sm:p-6 rounded-xl shadow-lg ${className}`}>
-      <div className="flex justify-between items-center mb-4">
-        <div className="flex items-center space-x-2">
-            {icon}
-            <h3 className="text-lg font-semibold text-textPrimary">{title}</h3>
-        </div>
-        {titleAction}
-      </div>
-      {children}
-    </div>
-  );
+
 
 
 const Dashboard: React.FC = () => {
@@ -87,110 +81,194 @@ const Dashboard: React.FC = () => {
 
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
-        <h2 className="text-2xl sm:text-3xl font-bold text-textPrimary">
-            Welcome back{currentUser ? `, ${currentUser.user_metadata.name || 'User'}` : ''}!
-        </h2>
-        <button className="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary-dark flex items-center space-x-2 transition self-start sm:self-auto">
-          <PlusIcon className="w-5 h-5" />
-          <span>Quick Add</span>
-        </button>
-      </div>
-
-      {/* Gamification Section */}
-      <Card title="Wellness Rewards" icon={<StarIcon className="w-6 h-6 text-secondary" />} className="bg-gradient-to-r from-primary-light via-cyan-50 to-secondary-light">
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-center">
+    <div className="min-h-screen bg-gradient-to-br from-energetic-green-50 to-blue-50">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Welcome Header */}
+        <div className="mb-8">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
             <div>
-                <p className="text-sm text-textSecondary font-medium">Total Points</p>
-                <p className="text-3xl font-bold text-primary">{userPoints?.totalPoints || 0}</p>
+              <h1 className="text-4xl font-bold text-gray-800 mb-2">
+                Welcome back{currentUser ? `, ${currentUser.user_metadata.name || 'User'}` : ''}!
+              </h1>
+              <p className="text-gray-600">Here's your health overview for today</p>
             </div>
-            <div>
-                <p className="text-sm text-textSecondary font-medium">Badges Earned</p>
-                {earnedBadges.length > 0 ? (
-                    <div className="flex justify-center items-center space-x-2 mt-2">
-                        {earnedBadges.slice(0, 4).map(earnedBadge => {
-                            const badgeDef = getBadgeDefinition(earnedBadge.badgeId);
-                            return badgeDef ? (
-                                <span key={earnedBadge.badgeId} title={badgeDef.name} className="text-2xl cursor-default">{badgeDef.icon}</span>
-                            ) : null;
-                        })}
-                        {earnedBadges.length > 4 && <span className="text-xs text-textSecondary">+{earnedBadges.length - 4} more</span>}
-                    </div>
-                ) : (
-                    <p className="text-sm text-textSecondary mt-2">-</p>
-                )}
-            </div>
-            <div>
-                <p className="text-sm text-textSecondary font-medium">Daily Water Streak</p>
-                <p className="text-2xl font-bold text-primary">💧 {waterStreak?.currentStreak || 0} <span className="text-lg font-medium">days</span></p>
-            </div>
+            <Button
+              variant="primary"
+              size="lg"
+              leftIcon={<PlusIcon className="w-5 h-5" />}
+              className="shadow-lg hover:shadow-xl"
+            >
+              Quick Add
+            </Button>
           </div>
-          <div className="text-center mt-4">
-            <Link to="/wellness-rewards" className="text-sm text-primary hover:underline font-medium">
-                View All Rewards & Progress &raquo;
-            </Link>
+        </div>
+
+        {/* Health Overview Widgets */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+          <DashboardWidget
+            title="Health Score"
+            subtitle="Overall wellness"
+            value="85%"
+            change={{ value: "+5% this week", trend: 'up' }}
+            icon={<HeartbeatIcon className="w-6 h-6" />}
+            variant="gradient"
+            gradient="from-green-500 to-emerald-600"
+          />
+          
+          <DashboardWidget
+            title="Family Members"
+            subtitle="Active profiles"
+            value={familyMembers.length}
+            icon={<UsersIcon className="w-6 h-6" />}
+            action={{
+              label: "Manage",
+              onClick: () => window.location.href = '/family-profiles'
+            }}
+          />
+          
+          <DashboardWidget
+            title="Wellness Points"
+            subtitle="Total earned"
+            value={userPoints?.totalPoints || 0}
+            change={{ value: "New badges available", trend: 'up' }}
+            icon={<StarIcon className="w-6 h-6" />}
+            variant="gradient"
+            gradient="from-yellow-500 to-orange-600"
+          />
+          
+          <DashboardWidget
+            title="Water Streak"
+            subtitle="Daily hydration"
+            value={`${waterStreak?.currentStreak || 0} days`}
+            icon={<span className="text-2xl">💧</span>}
+            variant="gradient"
+            gradient="from-blue-500 to-cyan-600"
+          />
+        </div>
+
+        {/* Quick Access Grid */}
+        <div className="mb-8">
+          <div className="flex justify-between items-center mb-6">
+            <h2 className="text-2xl font-bold text-gray-800">Quick Access</h2>
+            <Button variant="ghost" size="sm">
+              Customize
+            </Button>
           </div>
-      </Card>
-
-
-      <section>
-        <div className="flex justify-between items-center mb-4">
-          <h3 className="text-xl font-semibold text-textPrimary">Quick Access</h3>
-          <button className="text-sm text-primary hover:underline flex items-center">
-            <EditIcon className="w-4 h-4 mr-1" />
-            Customize
-          </button>
-        </div>
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4 sm:gap-6">
-          {quickAccessItems.map(item => (
-            <Link key={item.name} to={item.path} className="block p-4 sm:p-6 bg-surface rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 transform hover:-translate-y-1">
-              <div className="flex flex-col items-center text-center">
-                <item.icon className="w-10 h-10 sm:w-12 sm:h-12 text-primary mb-3" />
-                <h4 className="font-semibold text-textPrimary text-sm sm:text-base">{item.name}</h4>
-                {item.isNew && <span className="mt-1 text-xs bg-accent text-white px-2 py-0.5 rounded-full">New</span>}
-              </div>
-            </Link>
-          ))}
-        </div>
-      </section>
-
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <Card title="Family Members" className="lg:col-span-1">
-          <div className="space-y-3 max-h-96 overflow-y-auto">
-            {isLoadingMembers ? (
-              <p className="text-textSecondary text-center">Loading members...</p>
-            ) : (
-              familyMembers.map(member => (
-                <div key={member.id} className="flex items-center space-x-3 p-3 bg-slate-50 rounded-lg hover:bg-slate-100 transition-colors">
-                  <img src={member.profileImageUrl || DEFAULT_FAMILY_MEMBER_IMAGE} alt={member.name} className="w-10 h-10 rounded-full object-cover" />
-                  <div>
-                    <p className="font-medium text-textPrimary">{member.name}</p>
-                    <p className="text-xs text-textSecondary">{member.relationshipToUser}</p>
+          
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
+            {quickAccessItems.map(item => (
+              <Link 
+                key={item.name} 
+                to={item.path} 
+                className="group p-6 bg-white rounded-2xl shadow-sm border border-gray-100 hover:shadow-md hover:-translate-y-1 transition-all duration-200"
+              >
+                <div className="flex flex-col items-center text-center">
+                  <div className="w-12 h-12 bg-gradient-to-r from-primary-100 to-primary-200 rounded-xl flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
+                    <item.icon className="w-6 h-6 text-primary-600" />
                   </div>
-                  <Link to={`/family-profiles#${member.id}`} className="ml-auto text-primary hover:underline text-sm px-2 py-1 rounded hover:bg-primary-light">View</Link>
+                  <h3 className="font-semibold text-gray-800 text-sm mb-1">{item.name}</h3>
+                  {item.isNew && (
+                    <span className="text-xs bg-gradient-to-r from-pink-500 to-purple-600 text-white px-2 py-0.5 rounded-full font-medium">
+                      New
+                    </span>
+                  )}
                 </div>
-              ))
-            )}
-             <Link to="/family-profiles" className="block text-center mt-4 text-primary hover:underline font-medium">
-              Manage All Profiles
-            </Link>
+              </Link>
+            ))}
           </div>
-        </Card>
+        </div>
 
-        <Card title="Emergency Checklist" className="lg:col-span-1">
-            <div className="text-sm text-textSecondary">
-                <p>Is your emergency information up-to-date?</p>
-                <ul className="list-disc list-inside mt-2 space-y-1">
-                    <li>Emergency Contacts</li>
-                    <li>Allergies &amp; Medical Conditions</li>
-                    <li>Blood Type</li>
-                </ul>
-                 <Link to="/emergency" className="block text-center mt-4 text-primary hover:underline font-medium">
-                    Review Emergency Info &raquo;
-                </Link>
-            </div>
-        </Card>
+        {/* Bottom Section */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Family Members */}
+          <div className="lg:col-span-2">
+            <Card variant="elevated" className="h-full">
+              <CardHeader
+                title="Family Members"
+                subtitle={`${familyMembers.length} active profiles`}
+                icon={<UsersIcon className="w-6 h-6 text-primary-600" />}
+                action={
+                  <Button variant="ghost" size="sm">
+                    <Link to="/family-profiles">Manage All</Link>
+                  </Button>
+                }
+              />
+              
+              <CardContent>
+                {isLoadingMembers ? (
+                  <div className="text-center py-8">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-500 mx-auto mb-4"></div>
+                    <p className="text-gray-500">Loading members...</p>
+                  </div>
+                ) : familyMembers.length === 0 ? (
+                  <EmptyStateCard
+                    icon="👥"
+                    title="No family members yet"
+                    description="Add family members to start tracking their health"
+                    action={{
+                      label: "Add Member",
+                      onClick: () => window.location.href = '/family-profiles'
+                    }}
+                    gradient="from-blue-50 to-purple-50"
+                  />
+                ) : (
+                  <div className="space-y-3 max-h-80 overflow-y-auto">
+                    {familyMembers.map(member => (
+                      <div key={member.id} className="flex items-center space-x-4 p-4 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors">
+                        <div className="w-12 h-12 bg-gradient-to-r from-primary-500 to-primary-600 rounded-full flex items-center justify-center">
+                          <span className="text-white font-semibold">
+                            {member.name.charAt(0)}
+                          </span>
+                        </div>
+                        <div className="flex-1">
+                          <p className="font-semibold text-gray-800">{member.name}</p>
+                          <p className="text-sm text-gray-500">{member.relationship || 'Family Member'}</p>
+                        </div>
+                        <Button variant="ghost" size="sm">
+                          <Link to={`/family-profiles#${member.id}`}>View</Link>
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Emergency Checklist */}
+          <div>
+            <Card variant="elevated" className="h-full">
+              <CardHeader
+                title="Emergency Ready?"
+                subtitle="Keep your info updated"
+                icon={<span className="text-2xl">🚨</span>}
+              />
+              
+              <CardContent>
+                <div className="space-y-4">
+                  <div className="space-y-3">
+                    <div className="flex items-center space-x-3">
+                      <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                      <span className="text-sm text-gray-700">Emergency Contacts</span>
+                    </div>
+                    <div className="flex items-center space-x-3">
+                      <div className="w-2 h-2 bg-yellow-500 rounded-full"></div>
+                      <span className="text-sm text-gray-700">Medical Conditions</span>
+                    </div>
+                    <div className="flex items-center space-x-3">
+                      <div className="w-2 h-2 bg-red-500 rounded-full"></div>
+                      <span className="text-sm text-gray-700">Blood Type Info</span>
+                    </div>
+                  </div>
+                  
+                  <Button variant="outline" className="w-full mt-4">
+                    <Link to="/emergency">Review Emergency Info</Link>
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
       </div>
     </div>
   );

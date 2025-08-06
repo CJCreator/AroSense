@@ -4,21 +4,23 @@ import Layout from './components/Layout.tsx';
 import AuthLayout from './components/AuthLayout.tsx';
 import ProtectedRoute from './components/ProtectedRoute.tsx';
 import { AuthProvider, useAuth } from './contexts/AuthContext.tsx';
-import { awardPointsForDailyLaunch } from './utils/gamificationUtils.ts'; 
+import { awardPointsForDailyLaunch } from './utils/gamificationUtils.ts';
+import { ToastProvider } from './components/ui/Toast';
+import { AccessibilityProvider, SkipToMain } from './components/ui/AccessibilityProvider'; 
 
 // Static imports to resolve module loading issues
 import Dashboard from './components/Dashboard.tsx';
-import FamilyProfilesPage from './pages/FamilyProfilesPage.tsx';
-import EmergencyInfoPage from './pages/EmergencyInfoPage.tsx';
+import FamilyProfilesPage from './pages/FamilyProfilesPageModern.tsx';
+import EmergencyInfoPage from './pages/EmergencyInfoPageModern.tsx';
 import DocumentManagementPage from './pages/DocumentManagementPage.tsx';
 import PrescriptionPage from './pages/PrescriptionPage.tsx';
 import InsurancePage from './pages/InsurancePage.tsx';
 import FinancialPage from './pages/FinancialPage.tsx';
-import WellnessPage from './pages/WellnessPage.tsx';
-import BabyCarePage from './pages/BabyCarePage.tsx';
-import WomensCarePage from './pages/WomensCarePage.tsx';
+import WellnessPage from './pages/WellnessPageModern.tsx';
+import BabyCarePage from './pages/BabyCarePageModern.tsx';
+import WomensCarePage from './pages/WomensCarePageModern.tsx';
 import PregnancyPage from './pages/PregnancyPage.tsx';
-import SettingsPage from './pages/SettingsPage.tsx';
+import SettingsPageModern from './pages/SettingsPageModern.tsx';
 import TelehealthPage from './pages/TelehealthPage.tsx';
 import CommunityForumPage from './pages/CommunityForumPage.tsx';
 import WellnessRewardsPage from './pages/WellnessRewardsPage.tsx';
@@ -73,7 +75,7 @@ const AppContent: React.FC = () => {
           <Route path="/telehealth" element={<ProtectedRoute><TelehealthPage /></ProtectedRoute>} />
           <Route path="/community" element={<ProtectedRoute><CommunityForumPage /></ProtectedRoute>} />
           <Route path="/wellness-rewards" element={<ProtectedRoute><WellnessRewardsPage /></ProtectedRoute>} />
-          <Route path="/settings" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />
+          <Route path="/settings" element={<ProtectedRoute><SettingsPageModern /></ProtectedRoute>} />
           <Route path="/test" element={<ProtectedRoute><TestPage /></ProtectedRoute>} />
         </Route>
         
@@ -87,9 +89,14 @@ const AppContent: React.FC = () => {
 
 const App: React.FC = () => {
   return (
-    <AuthProvider>
-      <AppContent />
-    </AuthProvider>
+    <AccessibilityProvider>
+      <ToastProvider>
+        <AuthProvider>
+          <SkipToMain />
+          <AppContent />
+        </AuthProvider>
+      </ToastProvider>
+    </AccessibilityProvider>
   );
 };
 

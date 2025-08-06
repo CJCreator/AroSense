@@ -1,29 +1,22 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useLocation, useNavigate, Link } from 'react-router-dom'; // Added Link
-import { NAVIGATION_ITEMS } from '../constants.tsx';
+import { useLocation, useNavigate, Link } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext.tsx';
 import SearchIcon from './icons/SearchIcon.tsx';
 import BellIcon from './icons/BellIcon.tsx';
-import UserCircleIcon from './icons/UserCircleIcon.tsx';
-import ChevronDownIcon from './icons/ChevronDownIcon.tsx';
-import { useAuth } from '../contexts/AuthContext.tsx'; // Import useAuth
+import Breadcrumbs from './ui/Breadcrumbs';
 
 const Header: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  const { currentUser, logout, isAuthenticated } = useAuth(); // Get auth context
-  const [dropdownOpen, setDropdownOpen] = useState(false);
+  const { currentUser, logout, isAuthenticated } = useAuth();
+  const [showUserMenu, setShowUserMenu] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
   const dropdownRef = useRef<HTMLDivElement>(null);
-
-  const getCurrentPageName = () => {
-    const currentNavItem = NAVIGATION_ITEMS.find(item => location.pathname.startsWith(item.path));
-     if (location.pathname === '/' || location.pathname === '/dashboard') return 'Dashboard';
-    return currentNavItem ? currentNavItem.name : 'AroSense'; 
-  };
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-        setDropdownOpen(false);
+        setShowUserMenu(false);
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
@@ -32,53 +25,105 @@ const Header: React.FC = () => {
 
   const handleLogout = async () => {
     await logout();
-    setDropdownOpen(false);
-    navigate('/login'); // Redirect to login page after logout
+    setShowUserMenu(false);
+    navigate('/login');
   };
 
-
   return (
-    <header className="h-20 bg-surface shadow-sm flex items-center justify-between px-6 border-b border-slate-200 print:hidden">
-      <div>
-        <h2 className="text-xl font-semibold text-textPrimary">{getCurrentPageName()}</h2>
-      </div>
-      <div className="flex items-center space-x-4">
-        <div className="relative">
-          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-            <SearchIcon className="h-5 w-5 text-textSecondary" />
+    <header className="bg-white border-b border-gray-200 print:hidden">
+      {/* Main header */}
+      <div className="px-4 sm:px-6 py-4">
+        <div className="flex items-center justify-between">
+          {/* Search */}
+          <div className="flex-1 max-w-lg">
+            <div className="relative">
+              <SearchIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+              <input
+                type="text"
+                placeholder="Search health records, family members..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all duration-200"
+              />
+            </div>
           </div>
-          <input
-            type="text"
-            placeholder="Search..."
-            className="block w-full pl-10 pr-3 py-2 border border-slate-300 rounded-md leading-5 bg-white placeholder-textSecondary focus:outline-none focus:ring-primary focus:border-primary sm:text-sm transition-all duration-150"
-          />
-        </div>
-
-        <button className="p-2 rounded-full hover:bg-slate-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary">
-          <BellIcon className="h-6 w-6 text-textSecondary" />
-          {/* Notification badge example */}
-          {/* <span className="absolute top-0 right-0 block h-2 w-2 transform translate-x-1/2 -translate-y-1/2 rounded-full bg-red-500 ring-2 ring-white" /> */}
-        </button>
-
-        {isAuthenticated && currentUser && (
-          <div className="relative" ref={dropdownRef}>
-            <button
-              onClick={() => setDropdownOpen(!dropdownOpen)}
-              className="flex items-center space-x-2 p-1 rounded-full hover:bg-slate-100 focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-primary"
-            >
-              <UserCircleIcon className="h-8 w-8 text-textSecondary" />
-              <span className="hidden md:inline text-sm font-medium text-textPrimary">{currentUser.user_metadata.name || 'User'}</span>
-              <ChevronDownIcon className={`h-4 w-4 text-textSecondary transition-transform duration-200 ${dropdownOpen ? 'rotate-180' : ''}`} />
+          
+          {/* Right side */}
+          <div className="flex items-center space-x-4">
+            {/* Notifications */}
+            <button className="relative p-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100 transition-colors">
+              <BellIcon className="w-6 h-6" />
+              <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
             </button>
-            {dropdownOpen && (
-              <div className="absolute right-0 mt-2 w-48 bg-surface rounded-md shadow-lg py-1 ring-1 ring-black ring-opacity-5 z-50">
-                <Link to="/family-profiles" onClick={() => setDropdownOpen(false)} className="block px-4 py-2 text-sm text-textPrimary hover:bg-slate-100">Your Profile</Link>
-                <Link to="/settings" onClick={() => setDropdownOpen(false)} className="block px-4 py-2 text-sm text-textPrimary hover:bg-slate-100">Settings</Link>
-                <button onClick={handleLogout} className="w-full text-left block px-4 py-2 text-sm text-textPrimary hover:bg-slate-100">Sign out</button>
+            
+            {/* User profile dropdown */}
+            {isAuthenticated && currentUser && (
+              <div className="relative" ref={dropdownRef}>
+                <button
+                  onClick={() => setShowUserMenu(!showUserMenu)}
+                  className="flex items-center space-x-3 p-2 rounded-xl hover:bg-gray-50 transition-colors"
+                >
+                  <div className="w-8 h-8 bg-gradient-to-r from-primary-500 to-primary-600 rounded-full flex items-center justify-center">
+                    <span className="text-white text-sm font-semibold">
+                      {currentUser?.user_metadata?.name?.charAt(0) || 'U'}
+                    </span>
+                  </div>
+                  <div className="hidden sm:block text-left">
+                    <p className="text-sm font-semibold text-gray-800">
+                      {currentUser?.user_metadata?.name || 'User'}
+                    </p>
+                    <p className="text-xs text-gray-500">{currentUser?.email}</p>
+                  </div>
+                  <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
+                </button>
+                
+                {/* Dropdown menu */}
+                {showUserMenu && (
+                  <div className="absolute right-0 mt-2 w-48 bg-white rounded-xl shadow-lg border border-gray-200 py-2 z-50">
+                    <div className="px-4 py-2 border-b border-gray-100">
+                      <p className="text-sm font-semibold text-gray-800">
+                        {currentUser?.user_metadata?.name || 'User'}
+                      </p>
+                      <p className="text-xs text-gray-500">{currentUser?.email}</p>
+                    </div>
+                    
+                    <Link 
+                      to="/family-profiles" 
+                      onClick={() => setShowUserMenu(false)}
+                      className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                    >
+                      Profile Settings
+                    </Link>
+                    
+                    <Link 
+                      to="/settings" 
+                      onClick={() => setShowUserMenu(false)}
+                      className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                    >
+                      Preferences
+                    </Link>
+                    
+                    <div className="border-t border-gray-100 mt-2 pt-2">
+                      <button
+                        onClick={handleLogout}
+                        className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors"
+                      >
+                        Sign Out
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
           </div>
-        )}
+        </div>
+      </div>
+      
+      {/* Breadcrumbs */}
+      <div className="px-4 sm:px-6 pb-4">
+        <Breadcrumbs />
       </div>
     </header>
   );

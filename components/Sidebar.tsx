@@ -1,116 +1,118 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { NAVIGATION_ITEMS, APP_NAME } from '../constants.tsx';
 import { NavItem } from '../types.ts';
 
 const getActiveClasses = (path: string, currentPath: string): string => {
-  const baseActiveStyle = 'shadow-sm font-semibold'; // Added font-semibold for active items
   const isActuallyActive = currentPath.startsWith(path) || (path === '/dashboard' && currentPath === '/');
 
   if (!isActuallyActive) {
-    return 'text-textSecondary hover:bg-primary-light hover:text-primary-dark';
+    return 'text-gray-600 hover:bg-gray-50 hover:text-gray-900';
   }
 
-  switch (path) {
-    case '/dashboard': // energetic-green (#8BC34A)
-      return `bg-energetic-green text-textPrimary ${baseActiveStyle}`;
-    case '/family-profiles': // inclusive-orange (#FF9800)
-      return `bg-inclusive-orange text-textPrimary ${baseActiveStyle}`;
-    case '/emergency': // urgent-red (#F44336)
-      return `bg-urgent-red text-black ${baseActiveStyle}`;
-    case '/documents': // trustworthy-blue (#2196F3)
-      return `bg-trustworthy-blue text-black ${baseActiveStyle}`;
-    case '/prescriptions': // therapeutic-purple (#9C27B0)
-      return `bg-therapeutic-purple text-white ${baseActiveStyle}`;
-    case '/insurance': // secure-dark-blue (#1976D2)
-      return `bg-secure-dark-blue text-white ${baseActiveStyle}`;
-    case '/financial': // brand-teal (#00BCD4)
-      return `bg-brand-teal text-textPrimary ${baseActiveStyle}`;
-    case '/wellness': // vibrant-yellow-green (#CDDC39)
-      return `bg-vibrant-yellow-green text-textPrimary ${baseActiveStyle}`;
-    case '/baby-care': // gentle-pastel-blue (#90CAF9)
-      return `bg-gentle-pastel-blue text-textPrimary ${baseActiveStyle}`;
-    case '/womens-care': // empowering-pink (#E91E63)
-      return `bg-empowering-pink text-black ${baseActiveStyle}`;
-    case '/pregnancy': // nurturing-peach (#FFAB91)
-      return `bg-nurturing-peach text-textPrimary ${baseActiveStyle}`;
-    case '/wellness-rewards': // reward-gold (#FFD700)
-      return `bg-reward-gold text-textPrimary ${baseActiveStyle}`;
-    case '/telehealth': // modern-teal (#00838F)
-      return `bg-modern-teal text-black ${baseActiveStyle}`;
-    case '/community': // engaging-magenta (#E040FB)
-      return `bg-engaging-magenta text-textPrimary ${baseActiveStyle}`;
-    case '/settings': // sophisticated-grey (#757575)
-      return `bg-sophisticated-grey text-white ${baseActiveStyle}`;
-    default:
-      // Fallback active style: primary bg (#06b6d4), text-textPrimary for contrast
-      return `bg-primary text-textPrimary ${baseActiveStyle}`;
-  }
+  // Modern gradient-based active states
+  const activeStyles: Record<string, string> = {
+    '/dashboard': 'bg-gradient-to-r from-energetic-green-500 to-energetic-green-600 text-white shadow-lg',
+    '/family-profiles': 'bg-gradient-to-r from-inclusive-orange-500 to-inclusive-orange-600 text-white shadow-lg',
+    '/emergency': 'bg-gradient-to-r from-urgent-red-500 to-urgent-red-600 text-white shadow-lg',
+    '/documents': 'bg-gradient-to-r from-trustworthy-blue-500 to-trustworthy-blue-600 text-white shadow-lg',
+    '/prescriptions': 'bg-gradient-to-r from-therapeutic-purple-500 to-therapeutic-purple-600 text-white shadow-lg',
+    '/insurance': 'bg-gradient-to-r from-secure-dark-blue-500 to-secure-dark-blue-600 text-white shadow-lg',
+    '/financial': 'bg-gradient-to-r from-brand-teal-500 to-brand-teal-600 text-white shadow-lg',
+    '/wellness': 'bg-gradient-to-r from-vibrant-yellow-green-500 to-vibrant-yellow-green-600 text-white shadow-lg',
+    '/baby-care': 'bg-gradient-to-r from-gentle-pastel-blue-500 to-gentle-pastel-blue-600 text-white shadow-lg',
+    '/womens-care': 'bg-gradient-to-r from-empowering-pink-500 to-empowering-pink-600 text-white shadow-lg',
+    '/pregnancy': 'bg-gradient-to-r from-nurturing-peach-500 to-nurturing-peach-600 text-white shadow-lg',
+    '/wellness-rewards': 'bg-gradient-to-r from-reward-gold-500 to-reward-gold-600 text-white shadow-lg',
+    '/telehealth': 'bg-gradient-to-r from-modern-teal-500 to-modern-teal-600 text-white shadow-lg',
+    '/community': 'bg-gradient-to-r from-engaging-magenta-500 to-engaging-magenta-600 text-white shadow-lg',
+    '/settings': 'bg-gradient-to-r from-sophisticated-grey-500 to-sophisticated-grey-600 text-white shadow-lg',
+  };
+
+  return activeStyles[path] || 'bg-gradient-to-r from-primary-500 to-primary-600 text-white shadow-lg';
 };
 
-const getActiveIconClasses = (path: string, currentPath: string): string => {
-   const isActuallyActive = currentPath.startsWith(path) || (path === '/dashboard' && currentPath === '/');
-   if (!isActuallyActive) {
-    return 'text-slate-400 group-hover:text-primary-dark';
-  }
-  switch (path) {
-    case '/dashboard': return 'text-textPrimary';
-    case '/family-profiles': return 'text-textPrimary';
-    case '/emergency': return 'text-black';
-    case '/documents': return 'text-black';
-    case '/prescriptions': return 'text-white';
-    case '/insurance': return 'text-white';
-    case '/financial': return 'text-textPrimary';
-    case '/wellness': return 'text-textPrimary';
-    case '/baby-care': return 'text-textPrimary';
-    case '/womens-care': return 'text-black';
-    case '/pregnancy': return 'text-textPrimary';
-    case '/wellness-rewards': return 'text-textPrimary';
-    case '/telehealth': return 'text-black';
-    case '/community': return 'text-textPrimary';
-    case '/settings': return 'text-white';
-    default: return 'text-textPrimary'; // Fallback for general active icon (contrast with primary bg)
-  }
-};
+interface SidebarProps {
+  collapsed?: boolean;
+  onToggle?: () => void;
+}
 
-const Sidebar: React.FC = () => {
+const Sidebar: React.FC<SidebarProps> = ({ collapsed = false, onToggle }) => {
   const location = useLocation();
+  const [isCollapsed, setIsCollapsed] = useState(collapsed);
+
+  const handleToggle = () => {
+    setIsCollapsed(!isCollapsed);
+    onToggle?.();
+  };
 
   return (
-    <div className="w-64 bg-surface text-textPrimary flex flex-col border-r border-slate-200 print:hidden">
-      <div className="h-20 flex items-center justify-center border-b border-slate-200">
-        <h1 className="text-2xl font-bold text-primary">{APP_NAME}</h1>
+    <div className={`${isCollapsed ? 'w-16' : 'w-64'} bg-white border-r border-gray-200 flex flex-col transition-all duration-300 print:hidden shadow-sm`}>
+      {/* Header */}
+      <div className="h-16 flex items-center justify-between px-4 border-b border-gray-200">
+        {!isCollapsed && (
+          <h1 className="text-xl font-bold bg-gradient-to-r from-primary-600 to-primary-700 bg-clip-text text-transparent">
+            {APP_NAME}
+          </h1>
+        )}
+        <button
+          onClick={handleToggle}
+          className="p-2 rounded-lg hover:bg-gray-100 transition-colors lg:hidden"
+        >
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+          </svg>
+        </button>
       </div>
-      <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
+
+      {/* Navigation */}
+      <nav className="flex-1 p-3 space-y-1 overflow-y-auto">
         {NAVIGATION_ITEMS.map((item: NavItem) => {
           const isActive = location.pathname.startsWith(item.path) || (item.path === '/dashboard' && location.pathname === '/');
           const navLinkClasses = getActiveClasses(item.path, location.pathname);
-          const iconClasses = getActiveIconClasses(item.path, location.pathname);
 
           return (
             <NavLink
               key={item.name}
               to={item.path}
-              className={`flex items-center space-x-3 px-3 py-2.5 rounded-lg transition-colors duration-150 ease-in-out group ${navLinkClasses}`}
+              className={`flex items-center ${isCollapsed ? 'justify-center px-3 py-3' : 'space-x-3 px-4 py-3'} rounded-xl transition-all duration-200 group relative ${navLinkClasses}`}
+              title={isCollapsed ? item.name : undefined}
             >
-              <item.icon className={`w-5 h-5 ${iconClasses}`} />
-              <span className={`text-sm ${isActive ? 'font-semibold' : 'font-medium'}`}>{item.name}</span>
-              {item.isNew && (
-                <span 
-                  className={`ml-auto text-xs px-1.5 py-0.5 rounded-full ${
-                    isActive ? 'bg-white/40 text-inherit' : 'bg-accent text-white' // Adjusted opacity for better visibility on colored bg
-                  }`}
-                >
-                  New
-                </span>
+              <item.icon className="w-5 h-5 flex-shrink-0" />
+              
+              {!isCollapsed && (
+                <>
+                  <span className="font-medium text-sm truncate">{item.name}</span>
+                  {item.isNew && (
+                    <span className={`ml-auto text-xs px-2 py-0.5 rounded-full font-medium ${
+                      isActive ? 'bg-white/20 text-white' : 'bg-primary-100 text-primary-700'
+                    }`}>
+                      New
+                    </span>
+                  )}
+                </>
+              )}
+              
+              {/* Tooltip for collapsed state */}
+              {isCollapsed && (
+                <div className="absolute left-full ml-2 px-2 py-1 bg-gray-900 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-50">
+                  {item.name}
+                  {item.isNew && <span className="ml-1 text-primary-300">New</span>}
+                </div>
               )}
             </NavLink>
           );
         })}
       </nav>
-      <div className="p-4 border-t border-slate-200">
-        <p className="text-xs text-textSecondary text-center">&copy; {new Date().getFullYear()} {APP_NAME}</p>
-      </div>
+
+      {/* Footer */}
+      {!isCollapsed && (
+        <div className="p-4 border-t border-gray-200">
+          <p className="text-xs text-gray-500 text-center">
+            &copy; {new Date().getFullYear()} {APP_NAME}
+          </p>
+        </div>
+      )}
     </div>
   );
 };
