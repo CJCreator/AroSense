@@ -1,0 +1,8 @@
+{
+  "name": "AroSense - Family Medical Hub",
+  "description": "A comprehensive family medical record management web application for secure storage, organization, and quick access to essential health information.",
+  "requestFramePermissions": [
+    "camera"
+  ],
+  "prompt": ""
+}
