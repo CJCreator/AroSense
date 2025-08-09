@@ -348,8 +348,8 @@ const DocumentManagementPage: React.FC = () => {
             <thead className="bg-slate-50">
               <tr>
                 <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-textSecondary uppercase tracking-wider">Document Name</th>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-textSecondary uppercase tracking-wider">Type</th>
-                <th scope="col" className="hidden sm:table-cell px-6 py-3 text-left text-xs font-medium text-textSecondary uppercase tracking-wider">Family Member</th>
+                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-textSecondary uppercase tracking-wider">Family Member</th>
+                <th scope="col" className="hidden sm:table-cell px-6 py-3 text-left text-xs font-medium text-textSecondary uppercase tracking-wider">Type</th>
                 <th scope="col" className="hidden lg:table-cell px-6 py-3 text-left text-xs font-medium text-textSecondary uppercase tracking-wider">Tags</th>
                 <th scope="col" className="hidden lg:table-cell px-6 py-3 text-left text-xs font-medium text-textSecondary uppercase tracking-wider">Upload Date</th>
                 <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-textSecondary uppercase tracking-wider">Actions</th>
@@ -359,8 +359,8 @@ const DocumentManagementPage: React.FC = () => {
               {filteredDocuments.map(doc => (
                 <tr key={doc.id} className="hover:bg-slate-50 transition-colors">
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-textPrimary">{doc.name}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-textSecondary">{doc.type}</td>
-                  <td className="hidden sm:table-cell px-6 py-4 whitespace-nowrap text-sm text-textSecondary">{familyMembers.find(fm => fm.id === doc.familyMemberId)?.name || 'N/A'}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-textSecondary">{familyMembers.find(fm => fm.id === doc.familyMemberId)?.name || 'N/A'}</td>
+                  <td className="hidden sm:table-cell px-6 py-4 whitespace-nowrap text-sm text-textSecondary">{doc.type}</td>
                   <td className="hidden lg:table-cell px-6 py-4 whitespace-nowrap text-sm text-textSecondary">
                     <div className="flex flex-wrap gap-1">
                       {doc.tags?.map(tag => (
