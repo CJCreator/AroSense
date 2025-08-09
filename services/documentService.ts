@@ -146,6 +146,27 @@ export const updateDocument = async (userId: string, docId: string, docData: { n
     }
 };
 
+export const getAllTags = async (userId: string): Promise<string[]> => {
+    if (!validateUserId(userId)) return [];
+
+    try {
+        const { data, error } = await supabase
+            .from('documents')
+            .select('tags')
+            .eq('user_id', userId);
+
+        if (error) throw error;
+
+        const allTags = data.flatMap(doc => doc.tags || []);
+        const uniqueTags = [...new Set(allTags)];
+
+        return uniqueTags.sort();
+    } catch (error) {
+        console.error('Failed to get all tags:', sanitizeForLog(error));
+        return [];
+    }
+};
+
 export const deleteDocument = async (userId: string, docId: string): Promise<void> => {
     if (!validateUserId(userId)) throw new Error("Invalid user ID");
     

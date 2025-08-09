@@ -27,6 +27,8 @@ const DocumentManagementPage: React.FC = () => {
   const [currentFiles, setCurrentFiles] = useState<File[]>([]);
   const [filePreviews, setFilePreviews] = useState<string[]>([]);
   const [tags, setTags] = useState('');
+  const [allTags, setAllTags] = useState<string[]>([]);
+  const [tagSuggestions, setTagSuggestions] = useState<string[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
 
@@ -35,13 +37,15 @@ const DocumentManagementPage: React.FC = () => {
     setIsLoading(true);
     setError(null);
     try {
-        const [docs, members] = await Promise.all([
+        const [docs, members, allTagsResult] = await Promise.all([
             documentService.getDocuments(currentUser.id),
             familyMemberService.getFamilyMembers(currentUser.id, currentUser.user_metadata.name || 'User'),
+            documentService.getAllTags(currentUser.id),
         ]);
         setDocuments(docs);
         const memberOptions = members.map(({ id, name }) => ({ id, name }));
         setFamilyMembers([{ id: '0', name: 'General Family Document' }, ...memberOptions]);
+        setAllTags(allTagsResult);
     } catch (err: any) {
         console.error("Failed to load documents or family members:", err);
         setError("Could not load data. Please refresh the page.");
@@ -97,6 +101,32 @@ const DocumentManagementPage: React.FC = () => {
     setCurrentFiles([]);
     setFilePreviews([]);
     setTags('');
+    setTagSuggestions([]);
+  };
+
+  const handleTagInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const inputValue = e.target.value;
+    setTags(inputValue);
+
+    const tagParts = inputValue.split(',').map(t => t.trim());
+    const currentTag = tagParts[tagParts.length - 1];
+
+    if (currentTag) {
+        const suggestions = allTags.filter(t =>
+            t.toLowerCase().startsWith(currentTag.toLowerCase()) &&
+            !tagParts.slice(0, -1).some(p => p.toLowerCase() === t.toLowerCase())
+        );
+        setTagSuggestions(suggestions);
+    } else {
+        setTagSuggestions([]);
+    }
+  };
+
+  const handleSuggestionClick = (suggestion: string) => {
+      const tagParts = tags.split(',').map(t => t.trim());
+      tagParts[tagParts.length - 1] = suggestion;
+      setTags(tagParts.join(', ') + ', ');
+      setTagSuggestions([]);
   };
 
   const handleFormSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -168,6 +198,27 @@ const DocumentManagementPage: React.FC = () => {
         console.error("Failed to delete document:", err);
         alert(`Error deleting document: ${(err as Error).message}`);
       }
+    }
+  };
+
+  const handleRemoveTag = async (doc: Document, tagToRemove: string) => {
+    if (!currentUser) return;
+
+    const updatedTags = doc.tags?.filter(t => t !== tagToRemove) || [];
+
+    const updatedDocData = {
+        name: doc.name,
+        type: doc.type,
+        familyMemberId: doc.familyMemberId || '0',
+        tags: updatedTags,
+    };
+
+    try {
+        const updatedDoc = await documentService.updateDocument(currentUser.id, doc.id, updatedDocData);
+        setDocuments(docs => docs.map(d => d.id === doc.id ? updatedDoc : d));
+    } catch (error) {
+        console.error('Failed to remove tag:', error);
+        alert('Failed to remove tag. Please try again.');
     }
   };
 
@@ -254,9 +305,23 @@ const DocumentManagementPage: React.FC = () => {
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-textSecondary">{doc.type}</td>
                   <td className="hidden sm:table-cell px-6 py-4 whitespace-nowrap text-sm text-textSecondary">{familyMembers.find(fm => fm.id === doc.familyMemberId)?.name || 'N/A'}</td>
                   <td className="hidden lg:table-cell px-6 py-4 whitespace-nowrap text-sm text-textSecondary">
-                    {doc.tags?.map(tag => (
-                      <span key={tag} className="inline-block bg-blue-100 text-blue-800 text-xs font-medium mr-2 px-2.5 py-0.5 rounded-full">{tag}</span>
-                    ))}
+                    <div className="flex flex-wrap gap-1">
+                      {doc.tags?.map(tag => (
+                        <span key={tag} className="flex items-center bg-blue-100 text-blue-800 text-xs font-medium pl-2.5 pr-1 py-0.5 rounded-full">
+                          {tag}
+                          <button
+                              onClick={() => handleRemoveTag(doc, tag)}
+                              className="ml-1.5 flex-shrink-0 h-4 w-4 rounded-full inline-flex items-center justify-center text-blue-600 hover:bg-blue-200 hover:text-blue-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                              aria-label={`Remove tag ${tag}`}
+                          >
+                            <span className="sr-only">Remove {tag}</span>
+                            <svg className="h-2 w-2" stroke="currentColor" fill="none" viewBox="0 0 8 8">
+                              <path strokeLinecap="round" strokeWidth="1.5" d="M1 1l6 6m0-6L1 7" />
+                            </svg>
+                          </button>
+                        </span>
+                      ))}
+                    </div>
                   </td>
                   <td className="hidden lg:table-cell px-6 py-4 whitespace-nowrap text-sm text-textSecondary">{new Date(doc.uploadDate).toLocaleDateString()}</td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
@@ -300,9 +365,18 @@ const DocumentManagementPage: React.FC = () => {
                     {familyMembers.map(fm => <option key={fm.id} value={fm.id}>{fm.name}</option>)}
                 </select>
             </div>
-            <div className="mb-4">
+            <div className="mb-4 relative">
               <label htmlFor="tags" className="block text-sm font-medium text-textSecondary mb-1">Tags (comma-separated)</label>
-              <input type="text" name="tags" id="tags" value={tags} onChange={e => setTags(e.target.value)} placeholder="e.g., annual checkup, blood test" className="w-full p-2.5 border border-slate-300 rounded-md focus:ring-primary focus:border-primary bg-white"/>
+              <input type="text" name="tags" id="tags" value={tags} onChange={handleTagInputChange} placeholder="e.g., annual checkup, blood test" className="w-full p-2.5 border border-slate-300 rounded-md focus:ring-primary focus:border-primary bg-white" autoComplete="off" />
+              {tagSuggestions.length > 0 && (
+                <ul className="absolute z-10 w-full bg-white border border-slate-300 rounded-md mt-1 shadow-lg max-h-40 overflow-y-auto">
+                  {tagSuggestions.map(suggestion => (
+                    <li key={suggestion} onClick={() => handleSuggestionClick(suggestion)} className="px-4 py-2 cursor-pointer hover:bg-slate-100">
+                      {suggestion}
+                    </li>
+                  ))}
+                </ul>
+              )}
             </div>
 
             <div className="mb-6">
