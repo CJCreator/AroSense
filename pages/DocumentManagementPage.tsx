@@ -24,8 +24,9 @@ const DocumentManagementPage: React.FC = () => {
   const [filterFamilyMember, setFilterFamilyMember] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingDocument, setEditingDocument] = useState<Document | undefined>(undefined);
-  const [currentFile, setCurrentFile] = useState<File | null>(null);
-  const [filePreview, setFilePreview] = useState<string | null>(null);
+  const [currentFiles, setCurrentFiles] = useState<File[]>([]);
+  const [filePreviews, setFilePreviews] = useState<string[]>([]);
+  const [tags, setTags] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
 
@@ -55,14 +56,22 @@ const DocumentManagementPage: React.FC = () => {
 
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (file) {
-      setCurrentFile(file);
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setFilePreview(reader.result as string);
+    const files = event.target.files;
+    if (files && files.length > 0) {
+      const fileArray = Array.from(files);
+      setCurrentFiles(fileArray);
+
+      const fileToDataUrl = (file: File): Promise<string> => {
+        return new Promise((resolve) => {
+          const reader = new FileReader();
+          reader.onloadend = () => resolve(reader.result as string);
+          reader.readAsDataURL(file);
+        });
       };
-      reader.readAsDataURL(file);
+
+      Promise.all(fileArray.map(fileToDataUrl)).then(previews => {
+        setFilePreviews(previews);
+      });
     }
   };
 
@@ -76,77 +85,104 @@ const DocumentManagementPage: React.FC = () => {
 
   const openUploadModal = (doc?: Document) => {
     setEditingDocument(doc);
-    setCurrentFile(null);
-    setFilePreview(doc?.fileUrl && doc.fileUrl !== '#' ? doc.fileUrl : null);
+    setCurrentFiles([]);
+    setFilePreviews(doc?.fileUrl && doc.fileUrl !== '#' ? [doc.fileUrl] : []);
+    setTags(doc?.tags?.join(', ') || '');
     setIsModalOpen(true);
   };
 
   const closeUploadModal = () => {
     setIsModalOpen(false);
     setEditingDocument(undefined);
-    setCurrentFile(null);
-    setFilePreview(null);
+    setCurrentFiles([]);
+    setFilePreviews([]);
+    setTags('');
   };
 
   const handleFormSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!currentUser) return;
-    
+
     const formData = new FormData(e.currentTarget);
     const docName = formData.get('docName') as string;
     const docType = formData.get('docType') as string;
     const familyMemberId = formData.get('familyMemberId') as string;
+    const tagsArray = (formData.get('tags') as string || '').split(',').map(t => t.trim()).filter(Boolean);
 
-    if (!docName || !docType) {
-        alert("Document Name and Type are required.");
-        return;
+    if (currentFiles.length === 0 && !editingDocument) {
+      alert("Please select at least one file to upload.");
+      return;
     }
-    
+    if (!editingDocument && !docType) {
+      alert("Document Type is required for all uploads.");
+      return;
+    }
+
+    setIsLoading(true);
     try {
-        if (editingDocument) {
-            if (!currentFile && !editingDocument.fileUrl) {
-                alert("Please select a file to upload for the new document.");
-                return;
-            }
-            const updatedDoc = await documentService.updateDocument(currentUser.id, editingDocument.id, { name: docName, type: docType, familyMemberId }, currentFile || undefined);
-            setDocuments(docs => docs.map(d => d.id === editingDocument.id ? updatedDoc : d));
-        } else {
-            if (!currentFile) {
-                alert("Please select a file to upload.");
-                return;
-            }
-            const newDoc = await documentService.addDocument(currentUser.id, { name: docName, type: docType, familyMemberId }, currentFile);
-            setDocuments(docs => [...docs, newDoc]);
+      if (editingDocument) {
+        if (!docName || !docType) {
+          alert("Document Name and Type are required when editing.");
+          setIsLoading(false);
+          return;
         }
-        closeUploadModal();
-    } catch(err) {
-        console.error("Failed to save document:", err);
-        alert(`Error saving document: ${(err as Error).message}`);
+        const fileToUpdate = currentFiles.length > 0 ? currentFiles[0] : undefined;
+        if (!fileToUpdate && !editingDocument.fileUrl) {
+            alert("Please select a file for the document.");
+            setIsLoading(false);
+            return;
+        }
+        const updatedDocData = { name: docName, type: docType, familyMemberId, tags: tagsArray };
+        const updatedDoc = await documentService.updateDocument(currentUser.id, editingDocument.id, updatedDocData, fileToUpdate);
+        setDocuments(docs => docs.map(d => d.id === editingDocument.id ? updatedDoc : d));
+      } else {
+        const uploadPromises = currentFiles.map(file => {
+          const newDocData = {
+            name: currentFiles.length > 1 ? file.name : docName || file.name,
+            type: docType,
+            familyMemberId,
+            tags: tagsArray,
+          };
+          return documentService.addDocument(currentUser.id, newDocData, file);
+        });
+
+        const newDocs = await Promise.all(uploadPromises);
+        setDocuments(docs => [...docs, ...newDocs].sort((a,b) => new Date(b.uploadDate).getTime() - new Date(a.uploadDate).getTime()));
+      }
+      closeUploadModal();
+    } catch (err) {
+      console.error("Failed to save document(s):", err);
+      alert(`Error saving document(s): ${(err as Error).message}`);
+    } finally {
+      setIsLoading(false);
     }
   };
-  
-  const handleDeleteDocument = async (docToDelete: Document) => {
+
+  const handleDeleteDocument = async (docId: string) => {
     if (!currentUser) return;
     if (window.confirm("Are you sure you want to delete this document? This cannot be undone.")) {
-        try {
-            await documentService.deleteDocument(currentUser.id, docToDelete);
-            setDocuments(docs => docs.filter(d => d.id !== docToDelete.id));
-        } catch (err) {
-            console.error("Failed to delete document:", err);
-            alert(`Error deleting document: ${(err as Error).message}`);
-        }
+      try {
+        await documentService.deleteDocument(currentUser.id, docId);
+        setDocuments(docs => docs.filter(d => d.id !== docId));
+      } catch (err) {
+        console.error("Failed to delete document:", err);
+        alert(`Error deleting document: ${(err as Error).message}`);
+      }
     }
   };
 
 
   const filteredDocuments = documents.filter(doc => {
     const familyMemberName = familyMembers.find(fm => fm.id === doc.familyMemberId)?.name.toLowerCase() || '';
-    return (
-      doc.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      familyMemberName.includes(searchTerm.toLowerCase())
-    ) &&
-    (filterType ? doc.type === filterType : true) &&
-    (filterFamilyMember ? doc.familyMemberId === filterFamilyMember : true);
+    const searchTermLower = searchTerm.toLowerCase();
+
+    const matchesSearchTerm = doc.name.toLowerCase().includes(searchTermLower) ||
+      familyMemberName.includes(searchTermLower) ||
+      (doc.tags && doc.tags.some(tag => tag.toLowerCase().includes(searchTermLower)));
+
+    return matchesSearchTerm &&
+      (filterType ? doc.type === filterType : true) &&
+      (filterFamilyMember ? doc.familyMemberId === filterFamilyMember : true);
   });
 
   const documentTypes = [...new Set(documents.map(d => d.type).concat(['Lab Report', 'Prescription', 'Insurance Card', 'Bill/Receipt', 'Referral Letter', 'Vaccination Record', 'Legal Document']))].sort();
@@ -206,8 +242,8 @@ const DocumentManagementPage: React.FC = () => {
                 <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-textSecondary uppercase tracking-wider">Document Name</th>
                 <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-textSecondary uppercase tracking-wider">Type</th>
                 <th scope="col" className="hidden sm:table-cell px-6 py-3 text-left text-xs font-medium text-textSecondary uppercase tracking-wider">Family Member</th>
+                <th scope="col" className="hidden lg:table-cell px-6 py-3 text-left text-xs font-medium text-textSecondary uppercase tracking-wider">Tags</th>
                 <th scope="col" className="hidden lg:table-cell px-6 py-3 text-left text-xs font-medium text-textSecondary uppercase tracking-wider">Upload Date</th>
-                <th scope="col" className="hidden lg:table-cell px-6 py-3 text-left text-xs font-medium text-textSecondary uppercase tracking-wider">Version</th>
                 <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-textSecondary uppercase tracking-wider">Actions</th>
               </tr>
             </thead>
@@ -217,12 +253,16 @@ const DocumentManagementPage: React.FC = () => {
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-textPrimary">{doc.name}</td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-textSecondary">{doc.type}</td>
                   <td className="hidden sm:table-cell px-6 py-4 whitespace-nowrap text-sm text-textSecondary">{familyMembers.find(fm => fm.id === doc.familyMemberId)?.name || 'N/A'}</td>
+                  <td className="hidden lg:table-cell px-6 py-4 whitespace-nowrap text-sm text-textSecondary">
+                    {doc.tags?.map(tag => (
+                      <span key={tag} className="inline-block bg-blue-100 text-blue-800 text-xs font-medium mr-2 px-2.5 py-0.5 rounded-full">{tag}</span>
+                    ))}
+                  </td>
                   <td className="hidden lg:table-cell px-6 py-4 whitespace-nowrap text-sm text-textSecondary">{new Date(doc.uploadDate).toLocaleDateString()}</td>
-                  <td className="hidden lg:table-cell px-6 py-4 whitespace-nowrap text-sm text-textSecondary">{doc.version}</td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
                     <a href={doc.fileUrl} target="_blank" rel="noopener noreferrer" className="text-primary hover:text-primary-dark p-1 inline-block" title="View Document"><EyeIcon className="w-5 h-5"/></a>
                     <button onClick={() => openUploadModal(doc)} className="text-blue-600 hover:text-blue-800 p-1" title="Edit Document"><EditIcon className="w-5 h-5"/></button>
-                    <button onClick={() => handleDeleteDocument(doc)} className="text-red-600 hover:text-red-800 p-1" title="Delete Document"><TrashIcon className="w-5 h-5"/></button>
+                    <button onClick={() => handleDeleteDocument(doc.id)} className="text-red-600 hover:text-red-800 p-1" title="Delete Document"><TrashIcon className="w-5 h-5"/></button>
                   </td>
                 </tr>
               ))}
@@ -242,9 +282,10 @@ const DocumentManagementPage: React.FC = () => {
           <form onSubmit={handleFormSubmit} className="bg-surface p-6 rounded-lg shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
             <h2 className="text-2xl font-semibold mb-6 text-textPrimary">{editingDocument ? 'Edit' : 'Upload New'} Document</h2>
             
-            <div className="mb-4">
+            <div className={`mb-4 ${!editingDocument && currentFiles.length > 1 ? 'hidden' : ''}`}>
               <label htmlFor="docName" className="block text-sm font-medium text-textSecondary mb-1">Document Name</label>
-              <input type="text" name="docName" id="docName" defaultValue={editingDocument?.name || currentFile?.name || ''} required className="w-full p-2.5 border border-slate-300 rounded-md focus:ring-primary focus:border-primary bg-white"/>
+              <input type="text" name="docName" id="docName" defaultValue={editingDocument?.name || (currentFiles.length === 1 ? currentFiles[0].name : '')} required={editingDocument || currentFiles.length <= 1} className="w-full p-2.5 border border-slate-300 rounded-md focus:ring-primary focus:border-primary bg-white"/>
+              { !editingDocument && currentFiles.length > 1 && <p className="text-xs text-textSecondary mt-1">Document names will be generated from filenames.</p> }
             </div>
             <div className="mb-4">
               <label htmlFor="docType" className="block text-sm font-medium text-textSecondary mb-1">Document Type</label>
@@ -259,29 +300,50 @@ const DocumentManagementPage: React.FC = () => {
                     {familyMembers.map(fm => <option key={fm.id} value={fm.id}>{fm.name}</option>)}
                 </select>
             </div>
+            <div className="mb-4">
+              <label htmlFor="tags" className="block text-sm font-medium text-textSecondary mb-1">Tags (comma-separated)</label>
+              <input type="text" name="tags" id="tags" value={tags} onChange={e => setTags(e.target.value)} placeholder="e.g., annual checkup, blood test" className="w-full p-2.5 border border-slate-300 rounded-md focus:ring-primary focus:border-primary bg-white"/>
+            </div>
 
             <div className="mb-6">
-              <label className="block text-sm font-medium text-textSecondary mb-1">File {editingDocument ? '(Leave empty to keep existing)' : ''}</label>
+              <label className="block text-sm font-medium text-textSecondary mb-1">File(s) {editingDocument ? '(Leave empty to keep existing)' : ''}</label>
               <div className="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-slate-300 border-dashed rounded-md">
-                <div className="space-y-1 text-center">
-                  {filePreview ? (
-                     (filePreview.startsWith('data:image') || filePreview.match(/\.(jpeg|jpg|gif|png)$/) != null) ?
-                      <img src={filePreview} alt="Preview" className="mx-auto h-32 object-contain mb-2"/> :
-                      <div className="mx-auto h-32 flex flex-col items-center justify-center mb-2">
-                        <DocumentIcon className="w-16 h-16 text-textSecondary"/>
-                        <p className="text-sm text-textSecondary mt-1">{currentFile?.name || editingDocument?.name || 'File Selected'}</p>
-                      </div>
+                <div className="space-y-1 text-center w-full">
+                  {filePreviews.length > 0 ? (
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                    {filePreviews.map((preview, index) => {
+                        const fileName = currentFiles[index]?.name || editingDocument?.name || 'File';
+                        const isImage = preview.startsWith('data:image') || preview.match(/\.(jpeg|jpg|gif|png)$/i) != null;
+                        const isPdf = currentFiles[index]?.type === 'application/pdf' || (currentFiles.length === 0 && editingDocument?.fileUrl?.toLowerCase().endsWith('.pdf'));
+                        const isPreviewable = preview.startsWith('data:application/pdf') || (editingDocument?.fileUrl?.toLowerCase().endsWith('.pdf'));
+
+                        return (
+                            <div key={index} className="relative group w-full h-24">
+                                {isImage ? (
+                                    <img src={preview} alt={`Preview ${index}`} className="mx-auto h-full object-contain rounded-md"/>
+                                ) : isPdf && isPreviewable ? (
+                                    <iframe src={preview} title={fileName} className="w-full h-full border-0 rounded-md" />
+                                ) : (
+                                    <div className="mx-auto h-full flex flex-col items-center justify-center bg-slate-100 rounded-md p-2">
+                                        <DocumentIcon className="w-10 h-10 text-textSecondary"/>
+                                        <p className="text-xs text-textSecondary mt-1 truncate w-full" title={fileName}>{fileName}</p>
+                                    </div>
+                                )}
+                            </div>
+                        );
+                    })}
+                    </div>
                   ) : (
                     <UploadIcon className="mx-auto h-12 w-12 text-textSecondary" />
                   )}
                   <div className="flex text-sm text-slate-600 justify-center">
                     <button type="button" onClick={handleFileSelectClick} className="relative cursor-pointer bg-white rounded-md font-medium text-primary hover:text-primary-dark focus-within:outline-none focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-primary">
-                      <span>{currentFile ? 'Change file' : 'Upload a file'}</span>
-                      <input ref={fileInputRef} id="file-upload" name="file-upload" type="file" className="sr-only" onChange={handleFileChange} accept="image/*,.pdf,.doc,.docx,.txt,.csv,.xls,.xlsx"/>
+                      <span>{currentFiles.length > 0 ? 'Change files' : 'Upload file(s)'}</span>
+                      <input ref={fileInputRef} id="file-upload" name="file-upload" type="file" className="sr-only" onChange={handleFileChange} accept="image/*,.pdf,.doc,.docx,.txt,.csv,.xls,.xlsx" multiple={!editingDocument} />
                     </button>
-                    {!currentFile && <p className="pl-1">or drag and drop</p>}
+                    {currentFiles.length === 0 && <p className="pl-1">or drag and drop</p>}
                   </div>
-                  <p className="text-xs text-textSecondary">Images, PDF, DOC, TXT, CSV, XLS. Max 10MB.</p>
+                  <p className="text-xs text-textSecondary">Images, PDF, DOC, etc. Max 10MB.</p>
                   <button type="button" onClick={handleCameraCapture} className="mt-2 text-sm text-primary hover:text-primary-dark flex items-center mx-auto">
                     <CameraIcon className="w-4 h-4 mr-1"/> Use Camera
                     <input ref={cameraInputRef} type="file" accept="image/*" capture="environment" className="sr-only" onChange={handleFileChange} />

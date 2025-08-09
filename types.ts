@@ -62,6 +62,7 @@ export interface Document {
   fileUrl: string; 
   familyMemberId?: string; 
   version?: number;
+  tags?: string[];
 }
 
 export interface Prescription {

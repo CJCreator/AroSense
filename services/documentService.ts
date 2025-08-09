@@ -46,11 +46,12 @@ export const getDocuments = async (userId: string): Promise<Document[]> => {
         uploadDate: item.upload_date,
         fileUrl: item.file_path,
         familyMemberId: item.family_member_id,
-        version: 1
+        version: 1,
+        tags: item.tags || [],
     }));
 };
 
-export const addDocument = async (userId: string, docData: { name: string; type: string; familyMemberId: string }, file: File): Promise<Document> => {
+export const addDocument = async (userId: string, docData: { name: string; type: string; familyMemberId: string; tags: string[] }, file: File): Promise<Document> => {
     if (!validateUserId(userId)) throw new Error("Invalid user ID");
     
     const fileUrl = await uploadFileToStorage(file, userId);
@@ -64,7 +65,7 @@ export const addDocument = async (userId: string, docData: { name: string; type:
         file_path: fileUrl,
         file_size: file.size,
         mime_type: file.type,
-        tags: [],
+        tags: docData.tags,
         is_encrypted: false
     };
 
@@ -85,7 +86,8 @@ export const addDocument = async (userId: string, docData: { name: string; type:
         uploadDate: data.upload_date,
         fileUrl: data.file_path,
         familyMemberId: data.family_member_id,
-        version: 1
+        version: 1,
+        tags: data.tags || [],
     };
 };
 
@@ -97,7 +99,7 @@ interface DocumentUpdateData {
     version?: any;
 }
 
-export const updateDocument = async (userId: string, docId: string, docData: { name:string; type:string; familyMemberId:string }, file?: File): Promise<Document> => {
+export const updateDocument = async (userId: string, docId: string, docData: { name:string; type:string; familyMemberId:string, tags: string[] }, file?: File): Promise<Document> => {
     try {
         const validatedUserId = validateUserId(userId);
         const validatedDocId = validateId(docId);
@@ -106,7 +108,8 @@ export const updateDocument = async (userId: string, docId: string, docData: { n
         let updateData: any = {
             title: docData.name,
             document_type: docData.type,
-            family_member_id: docData.familyMemberId === '0' ? null : docData.familyMemberId
+            family_member_id: docData.familyMemberId === '0' ? null : docData.familyMemberId,
+            tags: docData.tags,
         };
         
         if (file) {
@@ -134,7 +137,8 @@ export const updateDocument = async (userId: string, docId: string, docData: { n
             uploadDate: data.upload_date,
             fileUrl: data.file_path,
             familyMemberId: data.family_member_id,
-            version: 1
+            version: 1,
+            tags: data.tags || [],
         };
     } catch (error) {
         console.error('Document update failed:', sanitizeForLog(error));
