@@ -4,6 +4,7 @@ import UploadIcon from '../components/icons/UploadIcon.tsx';
 import CameraIcon from '../components/icons/CameraIcon.tsx';
 import SearchIcon from '../components/icons/SearchIcon.tsx';
 import PlusIcon from '../components/icons/PlusIcon.tsx';
+import ChevronDownIcon from '../components/icons/ChevronDownIcon.tsx';
 import EditIcon from '../components/icons/EditIcon.tsx';
 import TrashIcon from '../components/icons/TrashIcon.tsx';
 import EyeIcon from '../components/icons/EyeIcon.tsx';
@@ -22,6 +23,10 @@ const DocumentManagementPage: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState('');
   const [filterFamilyMember, setFilterFamilyMember] = useState('');
+  const [selectedTags, setSelectedTags] = useState<string[]>([]);
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
+  const [isTagFilterOpen, setIsTagFilterOpen] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingDocument, setEditingDocument] = useState<Document | undefined>(undefined);
   const [currentFiles, setCurrentFiles] = useState<File[]>([]);
@@ -129,6 +134,12 @@ const DocumentManagementPage: React.FC = () => {
       setTagSuggestions([]);
   };
 
+  const handleTagFilterChange = (tag: string) => {
+    setSelectedTags(prev =>
+        prev.includes(tag) ? prev.filter(t => t !== tag) : [...prev, tag]
+    );
+  };
+
   const handleFormSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!currentUser) return;
@@ -227,13 +238,20 @@ const DocumentManagementPage: React.FC = () => {
     const familyMemberName = familyMembers.find(fm => fm.id === doc.familyMemberId)?.name.toLowerCase() || '';
     const searchTermLower = searchTerm.toLowerCase();
 
-    const matchesSearchTerm = doc.name.toLowerCase().includes(searchTermLower) ||
-      familyMemberName.includes(searchTermLower) ||
-      (doc.tags && doc.tags.some(tag => tag.toLowerCase().includes(searchTermLower)));
+    const matchesSearchTerm = searchTermLower === '' ||
+        doc.name.toLowerCase().includes(searchTermLower) ||
+        familyMemberName.includes(searchTermLower) ||
+        (doc.tags && doc.tags.some(tag => tag.toLowerCase().includes(searchTermLower)));
 
-    return matchesSearchTerm &&
-      (filterType ? doc.type === filterType : true) &&
-      (filterFamilyMember ? doc.familyMemberId === filterFamilyMember : true);
+    const matchesType = !filterType || doc.type === filterType;
+    const matchesFamilyMember = !filterFamilyMember || doc.familyMemberId === filterFamilyMember;
+    const matchesTags = selectedTags.length === 0 || selectedTags.every(tag => doc.tags?.includes(tag));
+
+    const docDate = new Date(doc.uploadDate);
+    const matchesStartDate = !startDate || docDate >= new Date(startDate);
+    const matchesEndDate = !endDate || docDate <= new Date(new Date(endDate).setHours(23, 59, 59, 999));
+
+    return matchesSearchTerm && matchesType && matchesFamilyMember && matchesTags && matchesStartDate && matchesEndDate;
   });
 
   const documentTypes = [...new Set(documents.map(d => d.type).concat(['Lab Report', 'Prescription', 'Insurance Card', 'Bill/Receipt', 'Referral Letter', 'Vaccination Record', 'Legal Document']))].sort();
@@ -254,35 +272,74 @@ const DocumentManagementPage: React.FC = () => {
         </button>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 bg-surface rounded-lg shadow">
-        <div className="relative">
-          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-            <SearchIcon className="h-5 w-5 text-textSecondary" />
+      <div className="p-4 bg-surface rounded-lg shadow space-y-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="relative">
+            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+              <SearchIcon className="h-5 w-5 text-textSecondary" />
+            </div>
+            <input
+              type="text"
+              placeholder="Search documents or members..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full pl-10 pr-3 py-2.5 border border-slate-300 rounded-md focus:ring-primary focus:border-primary bg-white"
+            />
           </div>
-          <input
-            type="text"
-            placeholder="Search documents or members..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-10 pr-3 py-2.5 border border-slate-300 rounded-md focus:ring-primary focus:border-primary bg-white"
-          />
+
+          <select
+              value={filterFamilyMember}
+              onChange={e => setFilterFamilyMember(e.target.value)}
+              className="w-full p-2.5 border border-slate-300 rounded-md focus:ring-primary focus:border-primary bg-white"
+          >
+            <option value="">All Family Members</option>
+            {familyMembers.map(fm => <option key={fm.id} value={fm.id}>{fm.name}</option>)}
+          </select>
+
+          <select
+              value={filterType}
+              onChange={e => setFilterType(e.target.value)}
+              className="w-full p-2.5 border border-slate-300 rounded-md focus:ring-primary focus:border-primary bg-white"
+          >
+            <option value="">Filter by Type</option>
+            {documentTypes.map(type => <option key={type} value={type}>{type}</option>)}
+          </select>
+
+          <div className="relative">
+            <button
+              onClick={() => setIsTagFilterOpen(!isTagFilterOpen)}
+              className="w-full p-2.5 border border-slate-300 rounded-md bg-white text-left flex justify-between items-center"
+            >
+              <span>{selectedTags.length > 0 ? `${selectedTags.length} tags selected` : "Filter by Tags"}</span>
+              <ChevronDownIcon className={`h-5 w-5 text-textSecondary transition-transform ${isTagFilterOpen ? 'rotate-180' : ''}`} />
+            </button>
+            {isTagFilterOpen && (
+              <div className="absolute z-20 w-full mt-1 bg-white border border-slate-300 rounded-md shadow-lg max-h-60 overflow-y-auto">
+                {allTags.map(tag => (
+                  <label key={tag} className="flex items-center px-4 py-2 text-sm text-textPrimary hover:bg-slate-50 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      className="h-4 w-4 rounded border-slate-300 text-primary focus:ring-primary"
+                      checked={selectedTags.includes(tag)}
+                      onChange={() => handleTagFilterChange(tag)}
+                    />
+                    <span className="ml-3">{tag}</span>
+                  </label>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
-        <select 
-            value={filterType} 
-            onChange={e => setFilterType(e.target.value)}
-            className="w-full p-2.5 border border-slate-300 rounded-md focus:ring-primary focus:border-primary bg-white"
-        >
-          <option value="">All Types</option>
-          {documentTypes.map(type => <option key={type} value={type}>{type}</option>)}
-        </select>
-        <select 
-            value={filterFamilyMember} 
-            onChange={e => setFilterFamilyMember(e.target.value)}
-            className="w-full p-2.5 border border-slate-300 rounded-md focus:ring-primary focus:border-primary bg-white"
-        >
-          <option value="">All Family Members</option>
-          {familyMembers.map(fm => <option key={fm.id} value={fm.id}>{fm.name}</option>)}
-        </select>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+                <label htmlFor="startDate" className="block text-sm font-medium text-textSecondary mb-1">Upload Date From</label>
+                <input type="date" id="startDate" value={startDate} onChange={e => setStartDate(e.target.value)} className="w-full p-2.5 border border-slate-300 rounded-md focus:ring-primary focus:border-primary bg-white" />
+            </div>
+            <div>
+                <label htmlFor="endDate" className="block text-sm font-medium text-textSecondary mb-1">Upload Date To</label>
+                <input type="date" id="endDate" value={endDate} onChange={e => setEndDate(e.target.value)} className="w-full p-2.5 border border-slate-300 rounded-md focus:ring-primary focus:border-primary bg-white" />
+            </div>
+        </div>
       </div>
 
       {filteredDocuments.length > 0 ? (
